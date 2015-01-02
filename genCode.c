@@ -13,12 +13,15 @@ void gendeclareIdList(AST_NODE* typeNode, SymbolAttributeKind isVariableOrTypeAt
 void gendeclareFunction(AST_NODE* declarationNode);
 void genprologue(char* functionName);
 void genepilogue();
+void genblock(AST_NODE* traverseListNode);
 
 int scopelevel = 0;
 
+FILE* fptr = NULL;
 
 void genCode(AST_NODE *root)
 {
+    fptr = fopen("output.s", "w");
     genProgramNode(root);
     return;
 }
@@ -97,7 +100,7 @@ void genDeclarationNode(AST_NODE* declarationNode)
         break;
     */
     case FUNCTION_DECL:
-        //declareFunction(declarationNode);
+        gendeclareFunction(declarationNode);//declareFunction(declarationNode);
         break;
     /*case FUNCTION_PARAMETER_DECL:
         gendeclareIdList(declarationNode, VARIABLE_ATTRIBUTE, 1);
@@ -117,7 +120,7 @@ void gendeclareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableO
     AST_NODE* traverseIDList = typeNode->rightSibling;
 
     if (scopelevel == 0) 
-        printf(".data\n"); //print  .data
+        fprintf(fptr,".data\n"); //print  .data
     while(traverseIDList)
     {
         //SymbolAttribute* attribute = (SymbolAttribute*)malloc(sizeof(SymbolAttribute));
@@ -126,7 +129,7 @@ void gendeclareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableO
         {
         case NORMAL_ID:
             //attribute->attr.typeDescriptor = typeNode->semantic_value.identifierSemanticValue.symbolTableEntry->attribute->attr.typeDescriptor;
-            printf("_g_%s: .word 0\n", traverseIDList->semantic_value.identifierSemanticValue.identifierName);
+            fprintf(fptr, "_g_%s: .word 0\n", traverseIDList->semantic_value.identifierSemanticValue.identifierName);
             break;
         case ARRAY_ID:
             /*printf("_g_%s: .word %s\n", 
@@ -147,43 +150,55 @@ void gendeclareFunction(AST_NODE* declarationNode)
 {
     AST_NODE* returnTypeNode = declarationNode->child;
     AST_NODE* functionNameID = returnTypeNode->rightSibling;
-    printf(".text\n");
-    printf("_start_%s:\n", functionNameID->semantic_value.identifierSemanticValue.identifierName);
+    AST_NODE* parameterListNode = functionNameID->rightSibling;
+    AST_NODE *blockNode = parameterListNode->rightSibling;
+    AST_NODE *traverseListNode = blockNode->child;
+
+    fprintf(fptr, ".text\n");
+    fprintf(fptr, "_start_%s:\n", functionNameID->semantic_value.identifierSemanticValue.identifierName);
     genprologue(functionNameID->semantic_value.identifierSemanticValue.identifierName);
+    genblock(traverseListNode);
+    fprintf(fptr, "_end_%s\n", functionNameID->semantic_value.identifierSemanticValue.identifierName);
+    genepilogue();
+}
+void genblock(AST_NODE* traverseListNode)
+{
     scopelevel++;
-    /*while(traverseListNode)
+
+    while(traverseListNode)
     {
         genGeneralNode(traverseListNode);
         traverseListNode = traverseListNode->rightSibling;
-    }*/
+    }
+
     if(scopelevel==0)  
     {
         printf("WTF? scopelevel = 0 at here\n");
     }
     else 
         scopelevel--;
-    genepilogue();
+    //print size of frame here
 }
 void genprologue(char* functionName)
 {
     int i=0;
 
-    printf("str lr, [sp, #0]\n");
-    printf("str fp, [sp, #-4]\n");
-    printf("str fp, [sp, #-4]\n");
-    printf("add fp, sp, #-4\n");
-    printf("add sp, sp, #-8\n");
-    printf("ldr lr, =_frameSize_%s\n", functionName);
-    printf("ldr lr, [lr, #0]\n");
-    printf("sub sp, sp, lr\n");
+    fprintf(fptr, "str lr, [sp, #0]\n");
+    fprintf(fptr, "str fp, [sp, #-4]\n");
+    fprintf(fptr, "str fp, [sp, #-4]\n");
+    fprintf(fptr, "add fp, sp, #-4\n");
+    fprintf(fptr, "add sp, sp, #-8\n");
+    fprintf(fptr, "ldr lr, =_frameSize_%s\n", functionName);
+    fprintf(fptr, "ldr lr, [lr, #0]\n");
+    fprintf(fptr, "sub sp, sp, lr\n");
 
     for (i = 4; i <= 11; i++)
     {
-        printf("str r%d, [sp, #%d]\n",i, (i-3)*4);
+        fprintf(fptr, "str r%d, [sp, #%d]\n",i, (i-3)*4);
     }
     for (i = 16; i <= 23; ++i)
     {
-        printf("vstr.f32 s%d, [sp, #%d]\n", i,(i-7*4));
+        fprintf(fptr, "vstr.f32 s%d, [sp, #%d]\n", i,(i-7*4));
     }
 }
 void genepilogue()
@@ -192,15 +207,15 @@ void genepilogue()
 
     for (i = 4; i <= 11; i++)
     {
-        printf("ldr r%d, [sp, #%d]\n",i, (i-3)*4);
+        fprintf(fptr, "ldr r%d, [sp, #%d]\n",i, (i-3)*4);
     }
     for (i = 16; i <= 23; ++i)
     {
-        printf("vldr.f32 s%d, [sp, #%d]\n", i,(i-7*4));
+        fprintf(fptr, "vldr.f32 s%d, [sp, #%d]\n", i,(i-7*4));
     }
-    printf("ldr lr, [fp, #4]\n");
-    printf("mov sp, fp\n");
-    printf("add sp, sp, #4\n");
-    printf("ldr fp, [fp,#0]\n");
-    printf("bx lr\n");
+    fprintf(fptr, "ldr lr, [fp, #4]\n");
+    fprintf(fptr, "mov sp, fp\n");
+    fprintf(fptr, "add sp, sp, #4\n");
+    fprintf(fptr, "ldr fp, [fp,#0]\n");
+    fprintf(fptr, "bx lr\n");
 }
