@@ -13,7 +13,8 @@ void gendeclareIdList(AST_NODE* typeNode, SymbolAttributeKind isVariableOrTypeAt
 void gendeclareFunction(AST_NODE* declarationNode);
 void genprologue(char* functionName);
 void genepilogue();
-void genblock(AST_NODE* traverseListNode);
+void genblock(AST_NODE* blockNode);
+void genStmtNode(AST_NODE *stmtNode);
 
 int scopelevel = 0;
 
@@ -60,7 +61,7 @@ void genGeneralNode(AST_NODE *node)
     case STMT_LIST_NODE:
         while(traverseChildren)
         {
-            //genStmtNode(traverseChildren);
+            genStmtNode(traverseChildren);
             traverseChildren = traverseChildren->rightSibling;
         }
         break;
@@ -125,18 +126,22 @@ void gendeclareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableO
     {
         //SymbolAttribute* attribute = (SymbolAttribute*)malloc(sizeof(SymbolAttribute));
         //attribute->attributeKind = isVariableOrTypeAttribute;
+        SymbolTableEntry* entry = (SymbolTableEntry*)malloc(sizeof(SymbolTableEntry));
         switch(traverseIDList->semantic_value.identifierSemanticValue.kind)
         {
         case NORMAL_ID:
-            //attribute->attr.typeDescriptor = typeNode->semantic_value.identifierSemanticValue.symbolTableEntry->attribute->attr.typeDescriptor;
-            fprintf(fptr, "_g_%s: .word 0\n", traverseIDList->semantic_value.identifierSemanticValue.identifierName);
+            if(typeNode->dataType == INT_TYPE)
+                fprintf(fptr, "_g_%s: .word 0\n.text\n", traverseIDList->semantic_value.identifierSemanticValue.identifierName);
+            else
+                fprintf(fptr, "_g_%s: .float 0\n.text\n", traverseIDList->semantic_value.identifierSemanticValue.identifierName);
             break;
         case ARRAY_ID:
-            /*printf("_g_%s: .word %s\n", 
-                traverseIDList->semantic_value.identifierSemanticValue.identifierName,
-                traverseIDList->semantic_value.identifierSemanticValue.identifierName,
+            //only one dimension array in this homework
+            entry = retrieveSymbol(traverseIDList->semantic_value.identifierSemanticValue.identifierName);
+            printf("_g_%s: .space  %d\n.text\n"
+                , traverseIDList->semantic_value.identifierSemanticValue.identifierName
+                , entry->attribute->attr.typeDescriptor->properties.arrayProperties.sizeInEachDimension[0]
                 );
-            */
             break;
         default:
             printf("Unhandle case in void gendeclareIdList(AST_NODE* typeNode)\n");
@@ -152,19 +157,20 @@ void gendeclareFunction(AST_NODE* declarationNode)
     AST_NODE* functionNameID = returnTypeNode->rightSibling;
     AST_NODE* parameterListNode = functionNameID->rightSibling;
     AST_NODE *blockNode = parameterListNode->rightSibling;
-    AST_NODE *traverseListNode = blockNode->child;
+    
 
     fprintf(fptr, ".text\n");
     fprintf(fptr, "_start_%s:\n", functionNameID->semantic_value.identifierSemanticValue.identifierName);
     genprologue(functionNameID->semantic_value.identifierSemanticValue.identifierName);
-    genblock(traverseListNode);
-    fprintf(fptr, "_end_%s\n", functionNameID->semantic_value.identifierSemanticValue.identifierName);
+    genblock(blockNode);
+    fprintf(fptr, "_end_%s:\n", functionNameID->semantic_value.identifierSemanticValue.identifierName);
     genepilogue();
 }
-void genblock(AST_NODE* traverseListNode)
+void genblock(AST_NODE* blockNode)
 {
     scopelevel++;
 
+    AST_NODE *traverseListNode = blockNode->child;
     while(traverseListNode)
     {
         genGeneralNode(traverseListNode);
@@ -185,7 +191,6 @@ void genprologue(char* functionName)
 
     fprintf(fptr, "str lr, [sp, #0]\n");
     fprintf(fptr, "str fp, [sp, #-4]\n");
-    fprintf(fptr, "str fp, [sp, #-4]\n");
     fprintf(fptr, "add fp, sp, #-4\n");
     fprintf(fptr, "add sp, sp, #-8\n");
     fprintf(fptr, "ldr lr, =_frameSize_%s\n", functionName);
@@ -198,7 +203,7 @@ void genprologue(char* functionName)
     }
     for (i = 16; i <= 23; ++i)
     {
-        fprintf(fptr, "vstr.f32 s%d, [sp, #%d]\n", i,(i-7*4));
+        fprintf(fptr, "vstr.f32 s%d, [sp, #%d]\n", i,(i-7)*4);
     }
 }
 void genepilogue()
@@ -211,11 +216,46 @@ void genepilogue()
     }
     for (i = 16; i <= 23; ++i)
     {
-        fprintf(fptr, "vldr.f32 s%d, [sp, #%d]\n", i,(i-7*4));
+        fprintf(fptr, "vldr.f32 s%d, [sp, #%d]\n", i,(i-7)*4);
     }
     fprintf(fptr, "ldr lr, [fp, #4]\n");
     fprintf(fptr, "mov sp, fp\n");
     fprintf(fptr, "add sp, sp, #4\n");
     fprintf(fptr, "ldr fp, [fp,#0]\n");
     fprintf(fptr, "bx lr\n");
+}
+void genStmtNode(AST_NODE *stmtNode)
+{
+    if(stmtNode->nodeType == NUL_NODE)
+    {
+        return;
+    }
+    else if(stmtNode->nodeType == BLOCK_NODE)
+    {
+        genblock(stmtNode);
+    }
+    else
+    {
+        switch(stmtNode->semantic_value.stmtSemanticValue.kind)
+        {
+        case WHILE_STMT:
+            //checkWhileStmt(stmtNode);
+            break;
+        case ASSIGN_STMT:
+            //checkAssignmentStmt(stmtNode);
+            break;
+        case IF_STMT:
+            //checkIfStmt(stmtNode);
+            break;
+        case FUNCTION_CALL_STMT:
+            //checkFunctionCall(stmtNode);
+            break;
+        case RETURN_STMT:
+            //checkReturnStmt(stmtNode);
+            break;
+        default:
+            printf("Unhandle case in void processStmtNode(AST_NODE* stmtNode)\n");
+            break;
+        }
+    }
 }
