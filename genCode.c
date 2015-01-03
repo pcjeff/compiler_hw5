@@ -12,11 +12,18 @@ void genDeclarationNode(AST_NODE* declarationNode);
 void gendeclareIdList(AST_NODE* typeNode, SymbolAttributeKind isVariableOrTypeAttribute, int ignoreArrayFirstDimSize);
 void gendeclareFunction(AST_NODE* declarationNode);
 void genprologue(char* functionName);
-void genepilogue();
+void genepilogue(char* functionName);
 void genblock(AST_NODE* blockNode);
 void genStmtNode(AST_NODE *stmtNode);
+void gencheckFunctionCall(AST_NODE* functionCallNode);
+void genWriteFunction(AST_NODE* functionCallNode);
+void genReadFunction(AST_NODE* functionCallNode);
 
-int scopelevel = 0;
+
+int scopelevel = 0, offset = 64;
+int const_num = 0;
+
+
 
 FILE* fptr = NULL;
 
@@ -138,7 +145,7 @@ void gendeclareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableO
         case ARRAY_ID:
             //only one dimension array in this homework
             entry = retrieveSymbol(traverseIDList->semantic_value.identifierSemanticValue.identifierName);
-            printf("_g_%s: .space  %d\n.text\n"
+            fprintf(fptr, "_g_%s: .space  %d\n.text\n"
                 , traverseIDList->semantic_value.identifierSemanticValue.identifierName
                 , entry->attribute->attr.typeDescriptor->properties.arrayProperties.sizeInEachDimension[0]
                 );
@@ -158,13 +165,10 @@ void gendeclareFunction(AST_NODE* declarationNode)
     AST_NODE* parameterListNode = functionNameID->rightSibling;
     AST_NODE *blockNode = parameterListNode->rightSibling;
     
-
-    fprintf(fptr, ".text\n");
-    fprintf(fptr, "_start_%s:\n", functionNameID->semantic_value.identifierSemanticValue.identifierName);
     genprologue(functionNameID->semantic_value.identifierSemanticValue.identifierName);
     genblock(blockNode);
-    fprintf(fptr, "_end_%s:\n", functionNameID->semantic_value.identifierSemanticValue.identifierName);
-    genepilogue();
+    genepilogue(functionNameID->semantic_value.identifierSemanticValue.identifierName);
+
 }
 void genblock(AST_NODE* blockNode)
 {
@@ -189,6 +193,8 @@ void genprologue(char* functionName)
 {
     int i=0;
 
+    fprintf(fptr, ".text\n");
+    fprintf(fptr, "_start_%s:\n", functionName);
     fprintf(fptr, "str lr, [sp, #0]\n");
     fprintf(fptr, "str fp, [sp, #-4]\n");
     fprintf(fptr, "add fp, sp, #-4\n");
@@ -206,10 +212,10 @@ void genprologue(char* functionName)
         fprintf(fptr, "vstr.f32 s%d, [sp, #%d]\n", i,(i-7)*4);
     }
 }
-void genepilogue()
+void genepilogue(char* functionName)
 {
     int i=0;
-
+    fprintf(fptr, "_end_%s:\n", functionName);
     for (i = 4; i <= 11; i++)
     {
         fprintf(fptr, "ldr r%d, [sp, #%d]\n",i, (i-3)*4);
@@ -223,6 +229,7 @@ void genepilogue()
     fprintf(fptr, "add sp, sp, #4\n");
     fprintf(fptr, "ldr fp, [fp,#0]\n");
     fprintf(fptr, "bx lr\n");
+    fprintf(fptr, "_frameSize_%s: .word %d\n", functionName, offset);
 }
 void genStmtNode(AST_NODE *stmtNode)
 {
@@ -248,7 +255,7 @@ void genStmtNode(AST_NODE *stmtNode)
             //checkIfStmt(stmtNode);
             break;
         case FUNCTION_CALL_STMT:
-            //checkFunctionCall(stmtNode);
+            gencheckFunctionCall(stmtNode);
             break;
         case RETURN_STMT:
             //checkReturnStmt(stmtNode);
@@ -258,4 +265,50 @@ void genStmtNode(AST_NODE *stmtNode)
             break;
         }
     }
+}
+void gencheckFunctionCall(AST_NODE* functionCallNode)
+{
+    AST_NODE* functionIDNode = functionCallNode->child;
+
+    //special case
+    if(strcmp(functionIDNode->semantic_value.identifierSemanticValue.identifierName, "write") == 0)
+    {
+        genWriteFunction(functionCallNode);
+        return;
+    }
+    if(strcmp(functionIDNode->semantic_value.identifierSemanticValue.identifierName, "read") == 0)
+    {
+        //genReadFunction(functionCallNode);
+        return;
+    }
+    else
+        fprintf(fptr, "\nbl %s\n", functionIDNode->semantic_value.identifierSemanticValue.identifierName);
+}
+void genWriteFunction(AST_NODE* functionCallNode)
+{
+    AST_NODE* functionIDNode = functionCallNode->child;
+    AST_NODE* actualParameter = functionIDNode->rightSibling;
+
+    if(actualParameter->dataType == CONST_STRING_TYPE)
+    {
+        fprintf(fptr, ".data\n");
+        fprintf(fptr, "_CONSTANT_%d: .ascii ", const_num, 
+            actualParameter->semantic_value.identifierSemanticValue.identifierName);
+        fprintf(fptr, ".align 2\n");
+        fprintf(fptr, "ldr r4, *_CONSTANT_%d\n", const_num);
+        fprintf(fptr, "mov r0, r4\n");
+        fprintf(fptr, "bl _write_str\n");
+        const_num++;
+    }
+    else if(actualParameter->dataType == FLOAT_TYPE)
+    {
+
+    }
+    else if(actualParameter->dataType == INT_TYPE)
+    {
+
+    }
+    else 
+        printf("ERROR type\n");
+
 }
