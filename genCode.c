@@ -287,28 +287,33 @@ void gencheckFunctionCall(AST_NODE* functionCallNode)
 void genWriteFunction(AST_NODE* functionCallNode)
 {
     AST_NODE* functionIDNode = functionCallNode->child;
-    AST_NODE* actualParameter = functionIDNode->rightSibling;
+    AST_NODE* actualParameterList = functionIDNode->rightSibling;
+    AST_NODE* actualParameter = actualParameterList->child;
 
     if(actualParameter->dataType == CONST_STRING_TYPE)
     {
         fprintf(fptr, ".data\n");
-        fprintf(fptr, "_CONSTANT_%d: .ascii ", const_num, 
-            actualParameter->semantic_value.identifierSemanticValue.identifierName);
-        fprintf(fptr, ".align 2\n");
-        fprintf(fptr, "ldr r4, *_CONSTANT_%d\n", const_num);
+        fprintf(fptr, "_CONSTANT_%d: .ascii %s", const_num, 
+            actualParameter->semantic_value.const1->const_u.sc);
+        fprintf(fptr, ".align 2\n.text\n");
+        fprintf(fptr, "ldr r4, =_CONSTANT_%d\n", const_num);
         fprintf(fptr, "mov r0, r4\n");
         fprintf(fptr, "bl _write_str\n");
         const_num++;
     }
     else if(actualParameter->dataType == FLOAT_TYPE)
     {
-
+        fprintf(fptr, "ldr r4, [fp, #-4]\n");
+        fprintf(fptr, "mov r0, r4\n");
+        fprintf(fptr, "bl _write_int\n");
     }
     else if(actualParameter->dataType == INT_TYPE)
     {
-
+        fprintf(fptr, "vldr.f32 s16, [fp, #-8]\n");
+        fprintf(fptr, "vmov s0, s16\n");
+        fprintf(fptr, "vmov s0, s16\n");
     }
     else 
-        printf("ERROR type\n");
+        printf("ERROR type: %d\n", actualParameter->dataType);
 
 }
