@@ -78,6 +78,7 @@ typedef struct SymbolTableEntry
     struct SymbolTableEntry* sameNameInOuterLevel;
 
     char* name;
+    int offset;
     SymbolAttribute* attribute;
     int nestingLevel;
 

@@ -4,7 +4,6 @@
 #include "header.h"
 #include "symbolTable.h"
 
-
 void genCode(AST_NODE *root);
 void genProgramNode(AST_NODE *programNode);
 void genGeneralNode(AST_NODE *node);
@@ -15,17 +14,49 @@ void genprologue(char* functionName);
 void genepilogue(char* functionName);
 void genblock(AST_NODE* blockNode);
 void genStmtNode(AST_NODE *stmtNode);
+void genAssignmentStmt(AST_NODE* assignmentNode);
 void gencheckFunctionCall(AST_NODE* functionCallNode);
 void genWriteFunction(AST_NODE* functionCallNode);
 void genReadFunction(AST_NODE* functionCallNode);
+void genVariableLValue(AST_NODE* idNode);
+void genExprRelatedNode(AST_NODE* exprRelatedNode);
+
+int get_reg(int float_or_int);
+void free_reg(int reg_num, int float_or_int);
 
 
-int scopelevel = 0, offset = 64;
+int reg_use[2][8] = {0};
+
+int scopelevel = 0, AR_offset = 0, reg_num = 0;
 int const_num = 0;
 
 
 
 FILE* fptr = NULL;
+
+int get_reg(int float_or_int)
+{
+    int i=0;
+
+    for(i=0 ; i<8 ; i++)
+    {
+        if(reg_use[float_or_int][i] == 0)
+        {
+            reg_use[float_or_int][i] = 1;
+            return i;
+        }
+    }   
+    if(i == 8) //out of register need str
+    {
+        //implement it later
+    }
+}
+void free_reg(int reg_num,int float_or_int)
+{
+    reg_use[float_or_int][reg_num] = 0;
+}
+
+
 
 void genCode(AST_NODE *root)
 {
@@ -144,10 +175,11 @@ void gendeclareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableO
             break;
         case ARRAY_ID:
             //only one dimension array in this homework
-            entry = retrieveSymbol(traverseIDList->semantic_value.identifierSemanticValue.identifierName);
+            entry = traverseIDList->semantic_value.identifierSemanticValue.symbolTableEntry;
             fprintf(fptr, "_g_%s: .space  %d\n.text\n"
                 , traverseIDList->semantic_value.identifierSemanticValue.identifierName
                 , entry->attribute->attr.typeDescriptor->properties.arrayProperties.sizeInEachDimension[0]
+                *(traverseIDList->dataType == INT_TYPE?4:8)
                 );
             break;
         default:
@@ -229,7 +261,7 @@ void genepilogue(char* functionName)
     fprintf(fptr, "add sp, sp, #4\n");
     fprintf(fptr, "ldr fp, [fp,#0]\n");
     fprintf(fptr, "bx lr\n");
-    fprintf(fptr, "_frameSize_%s: .word %d\n", functionName, offset);
+    fprintf(fptr, "_frameSize_%s: .word %d\n", functionName, AR_offset*-1+64);
 }
 void genStmtNode(AST_NODE *stmtNode)
 {
@@ -249,7 +281,7 @@ void genStmtNode(AST_NODE *stmtNode)
             //checkWhileStmt(stmtNode);
             break;
         case ASSIGN_STMT:
-            //checkAssignmentStmt(stmtNode);
+            //genAssignmentStmt(stmtNode);
             break;
         case IF_STMT:
             //checkIfStmt(stmtNode);
@@ -265,6 +297,85 @@ void genStmtNode(AST_NODE *stmtNode)
             break;
         }
     }
+}
+/*void genVariableLValue(AST_NODE* idNode)
+{   
+    if(idNode->dataType == INT_TYPE)
+        AR_offset -= 4;
+    else 
+        AR_offset -= 8;
+    idNode->semantic_value.identifierSemanticValue.symbolTableEntry->offset = AR_offset;
+}
+void genExprRelatedNode(AST_NODE* exprRelatedNode)
+{
+
+    switch(exprRelatedNode->nodeType)
+    {
+    case EXPR_NODE:
+        //processExprNode(exprRelatedNode);
+        break;
+    case STMT_NODE:
+        //function call
+        //gencheckFunctionCall(exprRelatedNode);
+        //exprRelatedNode->place = 0;
+        break;
+    case IDENTIFIER_NODE:
+        //genVariableRValue(exprRelatedNode);
+        break;
+    case CONST_VALUE_NODE:
+        //processConstValueNode(exprRelatedNode);
+        exprRelatedNode->place = get_reg(exprRelatedNode->dataType);
+        break;
+    default:
+        printf("Unhandle case in void processExprRelatedNode(AST_NODE* exprRelatedNode)\n");
+        exprRelatedNode->dataType = ERROR_TYPE;
+        break;
+    }//
+
+}*/
+void genAssignmentStmt(AST_NODE* assignmentNode)
+{
+    int reg, offset;
+//等等檢查
+    AST_NODE* leftOp = assignmentNode->child;
+    AST_NODE* rightOp = leftOp->rightSibling;
+
+    //genVariableLValue(leftOp);
+    //genExprRelatedNode(rightOp);
+    SymbolTableEntry* left_entry = (SymbolTableEntry*)malloc(sizeof(SymbolTableEntry));
+    left_entry = leftOp->semantic_value.identifierSemanticValue.symbolTableEntry;
+
+    reg = rightOp->place;
+    offset = left_entry->offset;
+
+    if(left_entry->nestingLevel != 0)
+    {
+        if(leftOp->dataType == INT_TYPE)
+        {
+            fprintf(fptr, "str r%d, [fp, #%d]\n", reg, -1*offset);
+            free_reg(reg, INT_TYPE);
+        }
+        else if(leftOp->dataType == FLOAT_TYPE)
+        {
+            fprintf(fptr, "vstr.f32 s%d, [fp, #%d]\n", reg, -1*offset);
+            free_reg(reg, FLOAT_TYPE);
+        }
+    }
+    else
+    {
+        int left_reg = get_reg(leftOp->dataType);
+        fprintf(fptr, "ldr r%d, =_g_%s\n", reg, leftOp->semantic_value.identifierSemanticValue.identifierName);
+        
+        if(leftOp->semantic_value.identifierSemanticValue.kind == NORMAL_ID)
+            fprintf(fptr, "str r%d, [r%d, 0]\n", reg, left_reg);
+        else if(leftOp->semantic_value.identifierSemanticValue.kind == ARRAY_ID)
+            fprintf(fptr, "str r%d, [r%d, %d]\n", reg, left_reg, 
+                leftOp->child->semantic_value.exprSemanticValue.constEvalValue.iValue*
+                (leftOp->dataType == INT_TYPE)? 4:8);//global array
+        free_reg(reg, INT_TYPE);
+        free_reg(left_reg, INT_TYPE);
+    }
+
 }
 void gencheckFunctionCall(AST_NODE* functionCallNode)
 {
@@ -293,7 +404,7 @@ void genWriteFunction(AST_NODE* functionCallNode)
     if(actualParameter->dataType == CONST_STRING_TYPE)
     {
         fprintf(fptr, ".data\n");
-        fprintf(fptr, "_CONSTANT_%d: .ascii %s", const_num, 
+        fprintf(fptr, "_CONSTANT_%d: .ascii %s\n", const_num, 
             actualParameter->semantic_value.const1->const_u.sc);
         fprintf(fptr, ".align 2\n.text\n");
         fprintf(fptr, "ldr r4, =_CONSTANT_%d\n", const_num);
@@ -303,17 +414,16 @@ void genWriteFunction(AST_NODE* functionCallNode)
     }
     else if(actualParameter->dataType == FLOAT_TYPE)
     {
-        fprintf(fptr, "ldr r4, [fp, #-4]\n");
-        fprintf(fptr, "mov r0, r4\n");
-        fprintf(fptr, "bl _write_int\n");
+        /*fprintf(fptr, "vldr.f32 s16, [fp, #-8]\n");
+        fprintf(fptr, "vmov s0, s16\n");
+        fprintf(fptr, "vmov s0, s16\n");*/
     }
     else if(actualParameter->dataType == INT_TYPE)
     {
-        fprintf(fptr, "vldr.f32 s16, [fp, #-8]\n");
-        fprintf(fptr, "vmov s0, s16\n");
-        fprintf(fptr, "vmov s0, s16\n");
+        /*fprintf(fptr, "ldr r4, [fp, #-4]\n");
+        fprintf(fptr, "mov r0, r4\n");
+        fprintf(fptr, "bl _write_int\n");*/
     }
     else 
         printf("ERROR type: %d\n", actualParameter->dataType);
-
 }
