@@ -19,7 +19,9 @@ void gencheckFunctionCall(AST_NODE* functionCallNode);
 void genWriteFunction(AST_NODE* functionCallNode);
 void genReadFunction(AST_NODE* functionCallNode);
 void genVariableLValue(AST_NODE* idNode);
+void genVariableRValue(AST_NODE* idNode);
 void genExprRelatedNode(AST_NODE* exprRelatedNode);
+void genConstValueNode(AST_NODE* constValueNode);
 
 int get_reg(int float_or_int);
 void free_reg(int reg_num, int float_or_int);
@@ -43,17 +45,24 @@ int get_reg(int float_or_int)
         if(reg_use[float_or_int][i] == 0)
         {
             reg_use[float_or_int][i] = 1;
-            return i;
+            if(float_or_int == INT_TYPE)
+                return i+4;
+            else 
+                return i+16;
         }
     }   
-    if(i == 8) //out of register need str
+    return -1;
+    /*if(i == 8) //out of register need str
     {
         //implement it later
-    }
+    }*/
 }
 void free_reg(int reg_num,int float_or_int)
 {
-    reg_use[float_or_int][reg_num] = 0;
+    if(float_or_int == INT_TYPE)
+        reg_use[float_or_int][reg_num-4] = 0;
+    else
+        reg_use[float_or_int][reg_num-16] = 0;
 }
 
 
@@ -179,7 +188,7 @@ void gendeclareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableO
             fprintf(fptr, "_g_%s: .space  %d\n.text\n"
                 , traverseIDList->semantic_value.identifierSemanticValue.identifierName
                 , entry->attribute->attr.typeDescriptor->properties.arrayProperties.sizeInEachDimension[0]
-                *(traverseIDList->dataType == INT_TYPE?4:8)
+                *4
                 );
             break;
         default:
@@ -298,13 +307,41 @@ void genStmtNode(AST_NODE *stmtNode)
         }
     }
 }
-/*void genVariableLValue(AST_NODE* idNode)
+void genVariableLValue(AST_NODE* idNode)
 {   
     if(idNode->dataType == INT_TYPE)
         AR_offset -= 4;
     else 
         AR_offset -= 8;
     idNode->semantic_value.identifierSemanticValue.symbolTableEntry->offset = AR_offset;
+}
+void genVariableRValue(AST_NODE* idNode)
+{//袋檢查
+    if(idNode->dataType == INT_TYPE)
+    {
+        idNode->place = get_reg(INT_TYPE);
+    }
+    else 
+    {
+        idNode->place = get_reg(FLOAT_TYPE);
+    }
+}
+void genConstValueNode(AST_NODE* constValueNode)
+{
+    int reg = 0;
+    if(constValueNode->dataType == INT_TYPE)
+    {
+        reg = get_reg(INT_TYPE);
+        constValueNode->place = reg;
+        fprintf(fptr, "mov r%d, #%d\n", reg, constValueNode->semantic_value.const1->const_u.intval);
+    }
+    else 
+    {
+        reg = get_reg(FLOAT_TYPE);
+        constValueNode->place = get_reg(FLOAT_TYPE);
+        fprintf(fptr, "vmov s%d, #%f\n", reg, constValueNode->semantic_value.const1->const_u.fval);
+    }
+
 }
 void genExprRelatedNode(AST_NODE* exprRelatedNode)
 {
@@ -323,8 +360,7 @@ void genExprRelatedNode(AST_NODE* exprRelatedNode)
         //genVariableRValue(exprRelatedNode);
         break;
     case CONST_VALUE_NODE:
-        //processConstValueNode(exprRelatedNode);
-        exprRelatedNode->place = get_reg(exprRelatedNode->dataType);
+        genConstValueNode(exprRelatedNode);
         break;
     default:
         printf("Unhandle case in void processExprRelatedNode(AST_NODE* exprRelatedNode)\n");
@@ -332,16 +368,16 @@ void genExprRelatedNode(AST_NODE* exprRelatedNode)
         break;
     }//
 
-}*/
+}
 void genAssignmentStmt(AST_NODE* assignmentNode)
 {
     int reg, offset;
-//等等檢查
+
     AST_NODE* leftOp = assignmentNode->child;
     AST_NODE* rightOp = leftOp->rightSibling;
 
-    //genVariableLValue(leftOp);
-    //genExprRelatedNode(rightOp);
+    genVariableLValue(leftOp);
+    genExprRelatedNode(rightOp);
     SymbolTableEntry* left_entry = (SymbolTableEntry*)malloc(sizeof(SymbolTableEntry));
     left_entry = leftOp->semantic_value.identifierSemanticValue.symbolTableEntry;
 
@@ -365,15 +401,26 @@ void genAssignmentStmt(AST_NODE* assignmentNode)
     {
         int left_reg = get_reg(leftOp->dataType);
         fprintf(fptr, "ldr r%d, =_g_%s\n", reg, leftOp->semantic_value.identifierSemanticValue.identifierName);
-        
-        if(leftOp->semantic_value.identifierSemanticValue.kind == NORMAL_ID)
-            fprintf(fptr, "str r%d, [r%d, 0]\n", reg, left_reg);
-        else if(leftOp->semantic_value.identifierSemanticValue.kind == ARRAY_ID)
-            fprintf(fptr, "str r%d, [r%d, %d]\n", reg, left_reg, 
-                leftOp->child->semantic_value.exprSemanticValue.constEvalValue.iValue*
-                (leftOp->dataType == INT_TYPE)? 4:8);//global array
-        free_reg(reg, INT_TYPE);
-        free_reg(left_reg, INT_TYPE);
+        if(leftOp->dataType == INT_TYPE)
+        {
+            if(leftOp->semantic_value.identifierSemanticValue.kind == NORMAL_ID)
+                fprintf(fptr, "str r%d, [r%d, 0]\n", reg, left_reg);
+            else if(leftOp->semantic_value.identifierSemanticValue.kind == ARRAY_ID)
+                fprintf(fptr, "str r%d, [r%d, %d]\n", reg, left_reg, 
+                    leftOp->child->semantic_value.exprSemanticValue.constEvalValue.iValue*4);//global array
+            free_reg(reg, INT_TYPE);
+            free_reg(left_reg, INT_TYPE);
+        }
+        else if(leftOp->dataType == FLOAT_TYPE)
+        {
+            if(leftOp->semantic_value.identifierSemanticValue.kind == NORMAL_ID)
+                fprintf(fptr, "vstr.f32 s%d, [r%d, 0]\n", reg, left_reg);
+            else if(leftOp->semantic_value.identifierSemanticValue.kind == ARRAY_ID)
+                fprintf(fptr, "vstr.f32 s%d, [r%d, %d]\n", reg, left_reg, 
+                    leftOp->child->semantic_value.exprSemanticValue.constEvalValue.iValue*4);//global array
+            free_reg(reg, FLOAT_TYPE);
+            free_reg(left_reg, INT_TYPE);
+        }
     }
 
 }
