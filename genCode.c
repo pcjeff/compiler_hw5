@@ -290,7 +290,7 @@ void genStmtNode(AST_NODE *stmtNode)
             //checkWhileStmt(stmtNode);
             break;
         case ASSIGN_STMT:
-            //genAssignmentStmt(stmtNode);
+            genAssignmentStmt(stmtNode);
             break;
         case IF_STMT:
             //checkIfStmt(stmtNode);
@@ -400,23 +400,26 @@ void genAssignmentStmt(AST_NODE* assignmentNode)
     else
     {
         int left_reg = get_reg(leftOp->dataType);
-        fprintf(fptr, "ldr r%d, =_g_%s\n", reg, leftOp->semantic_value.identifierSemanticValue.identifierName);
+
+        
         if(leftOp->dataType == INT_TYPE)
         {
+            fprintf(fptr, "ldr r%d, =_g_%s\n", left_reg, leftOp->semantic_value.identifierSemanticValue.identifierName);
             if(leftOp->semantic_value.identifierSemanticValue.kind == NORMAL_ID)
-                fprintf(fptr, "str r%d, [r%d, 0]\n", reg, left_reg);
+                fprintf(fptr, "str r%d, [r%d, #0]\n", reg, left_reg);
             else if(leftOp->semantic_value.identifierSemanticValue.kind == ARRAY_ID)
-                fprintf(fptr, "str r%d, [r%d, %d]\n", reg, left_reg, 
+                fprintf(fptr, "str r%d, [r%d, #%d]\n", reg, left_reg, 
                     leftOp->child->semantic_value.exprSemanticValue.constEvalValue.iValue*4);//global array
             free_reg(reg, INT_TYPE);
             free_reg(left_reg, INT_TYPE);
         }
         else if(leftOp->dataType == FLOAT_TYPE)
         {
+            fprintf(fptr, "ldr s%d, =_g_%s\n", left_reg, leftOp->semantic_value.identifierSemanticValue.identifierName);
             if(leftOp->semantic_value.identifierSemanticValue.kind == NORMAL_ID)
-                fprintf(fptr, "vstr.f32 s%d, [r%d, 0]\n", reg, left_reg);
+                fprintf(fptr, "vstr.f32 s%d, [r%d, #0]\n", reg, left_reg);
             else if(leftOp->semantic_value.identifierSemanticValue.kind == ARRAY_ID)
-                fprintf(fptr, "vstr.f32 s%d, [r%d, %d]\n", reg, left_reg, 
+                fprintf(fptr, "vstr.f32 s%d, [r%d, #%d]\n", reg, left_reg, 
                     leftOp->child->semantic_value.exprSemanticValue.constEvalValue.iValue*4);//global array
             free_reg(reg, FLOAT_TYPE);
             free_reg(left_reg, INT_TYPE);
