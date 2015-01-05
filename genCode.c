@@ -360,8 +360,8 @@ void genExprRelatedNode(AST_NODE* exprRelatedNode)
         break;
     case STMT_NODE:
         //function call
-        //gencheckFunctionCall(exprRelatedNode);
-        //exprRelatedNode->place = 0;
+        gencheckFunctionCall(exprRelatedNode);
+        exprRelatedNode->place = 0; //s0 or r0
         break;
     case IDENTIFIER_NODE:
         genVariableRValue(exprRelatedNode);
