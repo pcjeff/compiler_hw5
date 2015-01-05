@@ -387,12 +387,12 @@ void genAssignmentStmt(AST_NODE* assignmentNode)
         offset = left_entry->offset;//local variable 才需要用到,global 不用
         if(leftOp->dataType == INT_TYPE)
         {
-            fprintf(fptr, "str r%d, [fp, #%d]\n", reg, -1*offset);
+            fprintf(fptr, "str r%d, [fp, #%d]\n", reg, offset);
             free_reg(reg, INT_TYPE);
         }
         else if(leftOp->dataType == FLOAT_TYPE)
         {
-            fprintf(fptr, "vstr.f32 s%d, [fp, #%d]\n", reg, -1*offset);
+            fprintf(fptr, "vstr.f32 s%d, [fp, #%d]\n", reg, offset);
             free_reg(reg, FLOAT_TYPE);
         }
     }
@@ -407,7 +407,7 @@ void genAssignmentStmt(AST_NODE* assignmentNode)
                 fprintf(fptr, "str r%d, [r%d, #0]\n", reg, left_reg);
             else if(leftOp->semantic_value.identifierSemanticValue.kind == ARRAY_ID)
                 fprintf(fptr, "str r%d, [r%d, #%d]\n", reg, left_reg, 
-                    leftOp->child->semantic_value.exprSemanticValue.constEvalValue.iValue*4);//global array
+                    leftOp->child->semantic_value.exprSemanticValue.constEvalValue.iValue*(-4));//global array
             free_reg(reg, INT_TYPE);
             free_reg(left_reg, INT_TYPE);
         }
@@ -418,7 +418,7 @@ void genAssignmentStmt(AST_NODE* assignmentNode)
                 fprintf(fptr, "vstr.f32 s%d, [r%d, #0]\n", reg, left_reg);
             else if(leftOp->semantic_value.identifierSemanticValue.kind == ARRAY_ID)
                 fprintf(fptr, "vstr.f32 s%d, [r%d, #%d]\n", reg, left_reg, 
-                    leftOp->child->semantic_value.exprSemanticValue.constEvalValue.iValue*4);//global array
+                    leftOp->child->semantic_value.exprSemanticValue.constEvalValue.iValue*(-4));//global array
             free_reg(reg, FLOAT_TYPE);
             free_reg(left_reg, FLOAT_TYPE);
         }
@@ -453,13 +453,15 @@ void genWriteFunction(AST_NODE* functionCallNode)
 
     if(actualParameter->dataType == CONST_STRING_TYPE)
     {
+        reg = get_reg(INT_TYPE);
         fprintf(fptr, ".data\n");
         fprintf(fptr, "_CONSTANT_%d: .ascii %s\n", const_num, 
             actualParameter->semantic_value.const1->const_u.sc);
         fprintf(fptr, ".align 2\n.text\n");
-        fprintf(fptr, "ldr r4, =_CONSTANT_%d\n", const_num);
-        fprintf(fptr, "mov r0, r4\n");
+        fprintf(fptr, "ldr r%d, =_CONSTANT_%d\n", reg, const_num);
+        fprintf(fptr, "mov r0, r%d\n", reg);
         fprintf(fptr, "bl _write_str\n");
+        free_reg(reg, INT_TYPE);
         const_num++;
     }
     else if(actualParameter->dataType == FLOAT_TYPE)
@@ -468,8 +470,8 @@ void genWriteFunction(AST_NODE* functionCallNode)
         fprintf(fptr, "vldr.f32 s%d, [fp, #%d]\n", reg, 
             actualParameter->semantic_value.identifierSemanticValue.symbolTableEntry->offset);
         fprintf(fptr, "vmov.f32 s0, s%d\n", reg);
-        fprintf(fptr, "vmov.f32 s0, s%d\n", reg);
-        fprintf(fptr, "bl _write_int\n");
+        fprintf(fptr, "bl _write_float\n");
+        free_reg(reg, FLOAT_TYPE);
     }
     else if(actualParameter->dataType == INT_TYPE)
     {
@@ -478,6 +480,7 @@ void genWriteFunction(AST_NODE* functionCallNode)
             actualParameter->semantic_value.identifierSemanticValue.symbolTableEntry->offset);
         fprintf(fptr, "mov r0, r%d\n", reg);
         fprintf(fptr, "bl _write_int\n");
+        free_reg(reg, INT_TYPE);
     }
     else 
         printf("ERROR type: %d\n", actualParameter->dataType);
