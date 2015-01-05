@@ -31,7 +31,7 @@ int reg_use[2][8] = {0};
 
 int scopelevel = 0, AR_offset = 0, reg_num = 0;
 int const_num = 0;
-
+int fp_num = 0;
 
 
 FILE* fptr = NULL;
@@ -206,7 +206,7 @@ void gendeclareFunction(AST_NODE* declarationNode)
     AST_NODE* functionNameID = returnTypeNode->rightSibling;
     AST_NODE* parameterListNode = functionNameID->rightSibling;
     AST_NODE *blockNode = parameterListNode->rightSibling;
-    
+    AR_offset = 0;
     genprologue(functionNameID->semantic_value.identifierSemanticValue.identifierName);
     genblock(blockNode);
     genepilogue(functionNameID->semantic_value.identifierSemanticValue.identifierName);
@@ -214,21 +214,12 @@ void gendeclareFunction(AST_NODE* declarationNode)
 }
 void genblock(AST_NODE* blockNode)
 {
-    scopelevel++;
-
     AST_NODE *traverseListNode = blockNode->child;
     while(traverseListNode)
     {
         genGeneralNode(traverseListNode);
         traverseListNode = traverseListNode->rightSibling;
     }
-
-    if(scopelevel==0)  
-    {
-        printf("WTF? scopelevel = 0 at here\n");
-    }
-    else 
-        scopelevel--;
     //print size of frame here
 }
 void genprologue(char* functionName)
@@ -336,8 +327,17 @@ void genConstValueNode(AST_NODE* constValueNode)
     else 
     {
         reg = get_reg(FLOAT_TYPE);
-        constValueNode->place = reg;
-        fprintf(fptr, "vmov s%d, #%f\n", reg, constValueNode->semantic_value.const1->const_u.fval);
+        int temp_reg = get_reg(INT_TYPE);
+        constValueNodeueNode->place = reg;
+        fprintf(fptr, ".data\n");
+        fprintf(fptr, "_fp_%s_%d: ", constValueNode->semantic_value.identifierSemanticValue.identifierName, fp_num);
+        fprintf(fptr, "%f\n", constValueNode->semantic_value.const1->const_u.fval);
+        fprintf(fptr, "ldr r%d, =_fp_%s_%d\n", temp_reg,
+            constValueNode->semantic_value.identifierSemanticValue.identifierName, fp_num);
+        fprintf(fptr, "vldr.f32 s%d, [r%d, #0]\n", reg, temp_reg);
+        free_reg(temp_reg, INT_TYPE);
+        fp_num++;
+        //fprintf(fptr, "vmov.f32 s%d, #%f\n", reg, constValueNode->semantic_value.const1->const_u.fval);
     }
 
 }
@@ -383,8 +383,8 @@ void genAssignmentStmt(AST_NODE* assignmentNode)
     
     if(left_entry->nestingLevel != 0)
     {
-        genVariableLValue(leftOp);
-        offset = left_entry->offset;//local variable 才需要用到,global 不用
+        genVariableLValue(leftOp);//local variable 才需要用到,global 不用
+        offset = left_entry->offset;
         if(leftOp->dataType == INT_TYPE)
         {
             fprintf(fptr, "str r%d, [fp, #%d]\n", reg, offset);
