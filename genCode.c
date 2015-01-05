@@ -310,10 +310,7 @@ void genStmtNode(AST_NODE *stmtNode)
 }
 void genVariableLValue(AST_NODE* idNode)
 {   
-    if(idNode->dataType == INT_TYPE)
-        AR_offset -= 4;
-    else 
-        AR_offset -= 8;
+    AR_offset -= 4;
     idNode->semantic_value.identifierSemanticValue.symbolTableEntry->offset = AR_offset;
 }
 void genVariableRValue(AST_NODE* idNode)
@@ -377,16 +374,17 @@ void genAssignmentStmt(AST_NODE* assignmentNode)
     AST_NODE* leftOp = assignmentNode->child;
     AST_NODE* rightOp = leftOp->rightSibling;
 
-    genVariableLValue(leftOp);
+    
     genExprRelatedNode(rightOp);
     SymbolTableEntry* left_entry = (SymbolTableEntry*)malloc(sizeof(SymbolTableEntry));
     left_entry = leftOp->semantic_value.identifierSemanticValue.symbolTableEntry;
 
     reg = rightOp->place;
-    offset = left_entry->offset;
-
+    
     if(left_entry->nestingLevel != 0)
     {
+        genVariableLValue(leftOp);
+        offset = left_entry->offset;//local variable 才需要用到,global 不用
         if(leftOp->dataType == INT_TYPE)
         {
             fprintf(fptr, "str r%d, [fp, #%d]\n", reg, -1*offset);
@@ -401,7 +399,6 @@ void genAssignmentStmt(AST_NODE* assignmentNode)
     else
     {
         int left_reg = get_reg(INT_TYPE);
-
         
         if(leftOp->dataType == INT_TYPE)
         {
@@ -416,7 +413,7 @@ void genAssignmentStmt(AST_NODE* assignmentNode)
         }
         else if(leftOp->dataType == FLOAT_TYPE)
         {
-            fprintf(fptr, "vldr.f32 s%d, =_g_%s\n", left_reg, leftOp->semantic_value.identifierSemanticValue.identifierName);
+            fprintf(fptr, "ldr r%d, =_g_%s\n", left_reg, leftOp->semantic_value.identifierSemanticValue.identifierName);
             if(leftOp->semantic_value.identifierSemanticValue.kind == NORMAL_ID)
                 fprintf(fptr, "vstr.f32 s%d, [r%d, #0]\n", reg, left_reg);
             else if(leftOp->semantic_value.identifierSemanticValue.kind == ARRAY_ID)
@@ -448,6 +445,8 @@ void gencheckFunctionCall(AST_NODE* functionCallNode)
 }
 void genWriteFunction(AST_NODE* functionCallNode)
 {
+    int reg = 0, offset = 0;
+
     AST_NODE* functionIDNode = functionCallNode->child;
     AST_NODE* actualParameterList = functionIDNode->rightSibling;
     AST_NODE* actualParameter = actualParameterList->child;
@@ -465,15 +464,20 @@ void genWriteFunction(AST_NODE* functionCallNode)
     }
     else if(actualParameter->dataType == FLOAT_TYPE)
     {
-        /*fprintf(fptr, "vldr.f32 s16, [fp, #-8]\n");
-        fprintf(fptr, "vmov s0, s16\n");
-        fprintf(fptr, "vmov s0, s16\n");*/
+        reg = get_reg(FLOAT_TYPE);
+        fprintf(fptr, "vldr.f32 s%d, [fp, #%d]\n", reg, 
+            actualParameter->semantic_value.identifierSemanticValue.symbolTableEntry->offset);
+        fprintf(fptr, "vmov.f32 s0, s%d\n", reg);
+        fprintf(fptr, "vmov.f32 s0, s%d\n", reg);
+        fprintf(fptr, "bl _write_int\n");
     }
     else if(actualParameter->dataType == INT_TYPE)
     {
-        /*fprintf(fptr, "ldr r4, [fp, #-4]\n");
-        fprintf(fptr, "mov r0, r4\n");
-        fprintf(fptr, "bl _write_int\n");*/
+        reg = get_reg(INT_TYPE);
+        fprintf(fptr, "ldr r%d, [fp, #%d]\n", reg,
+            actualParameter->semantic_value.identifierSemanticValue.symbolTableEntry->offset);
+        fprintf(fptr, "mov r0, r%d\n", reg);
+        fprintf(fptr, "bl _write_int\n");
     }
     else 
         printf("ERROR type: %d\n", actualParameter->dataType);
