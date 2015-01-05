@@ -470,9 +470,9 @@ void genWriteFunction(AST_NODE* functionCallNode)
         int temp_reg = get_reg(INT_TYPE);
         if(actualParameter->semantic_value.identifierSemanticValue.symbolTableEntry->nestingLevel == 0)
         {
-            fprintf(fptr, "ldr r%d =_g_%s\n", temp_reg, 
+            fprintf(fptr, "ldr r%d, =_g_%s\n", temp_reg, 
                 actualParameter->semantic_value.identifierSemanticValue.identifierName);
-            fprintf(fptr, "vldr.f32 s%d [r%d, #0]\n", reg, temp_reg);
+            fprintf(fptr, "vldr.f32 s%d, [r%d, #0]\n", reg, temp_reg);
         }
         else
         {
@@ -487,11 +487,22 @@ void genWriteFunction(AST_NODE* functionCallNode)
     else if(actualParameter->dataType == INT_TYPE)
     {
         reg = get_reg(INT_TYPE);
-        fprintf(fptr, "ldr r%d, [fp, #%d]\n", reg,
+        int temp_reg = get_reg(INT_TYPE);
+        if(actualParameter->semantic_value.identifierSemanticValue.symbolTableEntry->nestingLevel == 0)
+        {
+            fprintf(fptr, "ldr r%d, =_g_%s\n", temp_reg, 
+                actualParameter->semantic_value.identifierSemanticValue.identifierName);
+            fprintf(fptr, "ldr r%d, [r%d, #0]\n", reg, temp_reg);   
+        }
+        else
+        {
+            fprintf(fptr, "ldr r%d, [fp, #%d]\n", reg,
             actualParameter->semantic_value.identifierSemanticValue.symbolTableEntry->offset);
+        }
         fprintf(fptr, "mov r0, r%d\n", reg);
         fprintf(fptr, "bl _write_int\n");
         free_reg(reg, INT_TYPE);
+        free_reg(temp_reg, INT_TYPE);
     }
     else 
         printf("ERROR type: %d\n", actualParameter->dataType);
