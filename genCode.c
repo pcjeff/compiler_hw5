@@ -18,6 +18,8 @@ void genAssignmentStmt(AST_NODE* assignmentNode);
 void gencheckFunctionCall(AST_NODE* functionCallNode);
 void genWriteFunction(AST_NODE* functionCallNode);
 void genReadFunction(AST_NODE* functionCallNode);
+void genReadFunction(AST_NODE* functionCallNode);
+void genFreadFunction(AST_NODE* functionCallNode);
 void genVariableLValue(AST_NODE* idNode);
 void genVariableRValue(AST_NODE* idNode);
 void genExprRelatedNode(AST_NODE* exprRelatedNode);
@@ -306,13 +308,20 @@ void genVariableLValue(AST_NODE* idNode)
 }
 void genVariableRValue(AST_NODE* idNode)
 {//袋檢查
+    int reg = 0;
     if(idNode->dataType == INT_TYPE)
     {
-        idNode->place = get_reg(INT_TYPE);
+        reg = get_reg(INT_TYPE);
+        fprintf(fptr, "ldr r%d, [fp, #%d]\n", reg, 
+            idNode->semantic_value.identifierSemanticValue.symbolTableEntry->offset);
+        idNode->place = reg;
     }
     else 
     {
-        idNode->place = get_reg(FLOAT_TYPE);
+        reg = get_reg(FLOAT_TYPE);
+        fprintf(fptr, "vldr.f23 s%d, [fp, #%d]\n", reg, 
+            idNode->semantic_value.identifierSemanticValue.symbolTableEntry->offset);
+        idNode->place = reg;
     }
 }
 void genConstValueNode(AST_NODE* constValueNode)
@@ -355,7 +364,7 @@ void genExprRelatedNode(AST_NODE* exprRelatedNode)
         //exprRelatedNode->place = 0;
         break;
     case IDENTIFIER_NODE:
-        //genVariableRValue(exprRelatedNode);
+        genVariableRValue(exprRelatedNode);
         break;
     case CONST_VALUE_NODE:
         genConstValueNode(exprRelatedNode);
@@ -435,11 +444,16 @@ void gencheckFunctionCall(AST_NODE* functionCallNode)
         genWriteFunction(functionCallNode);
         return;
     }
-    if(strcmp(functionIDNode->semantic_value.identifierSemanticValue.identifierName, "read") == 0)
+    else if(strcmp(functionIDNode->semantic_value.identifierSemanticValue.identifierName, "read") == 0)
     {
-        //genReadFunction(functionCallNode);
+        genReadFunction(functionCallNode);
         return;
     }
+    else if(strcmp(functionIDNode->semantic_value.identifierSemanticValue.identifierName, "fread") == 0)
+    {
+        genFreadFunction(functionCallNode);
+        return;
+    }    
     else
         fprintf(fptr, "\nbl %s\n", functionIDNode->semantic_value.identifierSemanticValue.identifierName);
 }
@@ -506,4 +520,12 @@ void genWriteFunction(AST_NODE* functionCallNode)
     }
     else 
         printf("ERROR type: %d\n", actualParameter->dataType);
+}
+void genReadFunction(AST_NODE* functionCallNode)
+{
+    fprintf(fptr, "bl _read_int\n");
+}
+void genFreadFunction(AST_NODE* functionCallNode)
+{
+    fprintf(fptr, "bl _read_float\n");
 }
