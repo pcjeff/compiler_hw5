@@ -328,12 +328,12 @@ void genConstValueNode(AST_NODE* constValueNode)
     {
         reg = get_reg(FLOAT_TYPE);
         int temp_reg = get_reg(INT_TYPE);
-        constValueNodeueNode->place = reg;
+        constValueNode->place = reg;
         fprintf(fptr, ".data\n");
-        fprintf(fptr, "_fp_%s_%d: ", constValueNode->semantic_value.identifierSemanticValue.identifierName, fp_num);
+        fprintf(fptr, "_fp_%d: .float", fp_num);
         fprintf(fptr, "%f\n", constValueNode->semantic_value.const1->const_u.fval);
-        fprintf(fptr, "ldr r%d, =_fp_%s_%d\n", temp_reg,
-            constValueNode->semantic_value.identifierSemanticValue.identifierName, fp_num);
+        fprintf(fptr, ".text\n");
+        fprintf(fptr, "ldr r%d, =_fp_%d\n", temp_reg, fp_num);
         fprintf(fptr, "vldr.f32 s%d, [r%d, #0]\n", reg, temp_reg);
         free_reg(temp_reg, INT_TYPE);
         fp_num++;
