@@ -167,35 +167,36 @@ void gendeclareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableO
  
     AST_NODE* traverseIDList = typeNode->rightSibling;
 
-    if (scopelevel == 0) 
-        fprintf(fptr,".data\n"); //print  .data
-    while(traverseIDList)
+    if (traverseIDList->semantic_value.identifierSemanticValue.symbolTableEntry->nestingLevel == 0) 
     {
-        //SymbolAttribute* attribute = (SymbolAttribute*)malloc(sizeof(SymbolAttribute));
-        //attribute->attributeKind = isVariableOrTypeAttribute;
-        SymbolTableEntry* entry = (SymbolTableEntry*)malloc(sizeof(SymbolTableEntry));
-        switch(traverseIDList->semantic_value.identifierSemanticValue.kind)
+        fprintf(fptr,".data\n"); //print  .data
+        while(traverseIDList)
         {
-        case NORMAL_ID:
-            if(typeNode->dataType == INT_TYPE)
-                fprintf(fptr, "_g_%s: .word 0\n.text\n", traverseIDList->semantic_value.identifierSemanticValue.identifierName);
-            else
-                fprintf(fptr, "_g_%s: .float 0\n.text\n", traverseIDList->semantic_value.identifierSemanticValue.identifierName);
-            break;
-        case ARRAY_ID:
-            //only one dimension array in this homework
-            entry = traverseIDList->semantic_value.identifierSemanticValue.symbolTableEntry;
-            fprintf(fptr, "_g_%s: .space  %d\n.text\n"
-                , traverseIDList->semantic_value.identifierSemanticValue.identifierName
-                , entry->attribute->attr.typeDescriptor->properties.arrayProperties.sizeInEachDimension[0]
-                *4
-                );
-            break;
-        default:
-            printf("Unhandle case in void gendeclareIdList(AST_NODE* typeNode)\n");
-            break;
+            SymbolTableEntry* entry = (SymbolTableEntry*)malloc(sizeof(SymbolTableEntry));
+            switch(traverseIDList->semantic_value.identifierSemanticValue.kind)
+            {
+            case NORMAL_ID:
+                if(typeNode->dataType == INT_TYPE)
+                    fprintf(fptr, "_g_%s: .word 0\n", traverseIDList->semantic_value.identifierSemanticValue.identifierName);
+                else
+                    fprintf(fptr, "_g_%s: .float 0\n", traverseIDList->semantic_value.identifierSemanticValue.identifierName);
+                break;
+            case ARRAY_ID:
+                //only one dimension array in this homework
+                entry = traverseIDList->semantic_value.identifierSemanticValue.symbolTableEntry;
+                fprintf(fptr, "_g_%s: .space  %d\n\n"
+                    , traverseIDList->semantic_value.identifierSemanticValue.identifierName
+                    , entry->attribute->attr.typeDescriptor->properties.arrayProperties.sizeInEachDimension[0]
+                    *4
+                    );
+                break;
+            default:
+                printf("Unhandle case in void gendeclareIdList(AST_NODE* typeNode)\n");
+                break;
+            }
+            traverseIDList = traverseIDList->rightSibling;
         }
-        traverseIDList = traverseIDList->rightSibling;
+        fprintf(fptr, ".text\n");
     }
 
 }
@@ -338,7 +339,7 @@ void genConstValueNode(AST_NODE* constValueNode)
     else 
     {
         reg = get_reg(FLOAT_TYPE);
-        constValueNode->place = get_reg(FLOAT_TYPE);
+        constValueNode->place = reg;
         fprintf(fptr, "vmov s%d, #%f\n", reg, constValueNode->semantic_value.const1->const_u.fval);
     }
 
@@ -399,7 +400,7 @@ void genAssignmentStmt(AST_NODE* assignmentNode)
     }
     else
     {
-        int left_reg = get_reg(leftOp->dataType);
+        int left_reg = get_reg(INT_TYPE);
 
         
         if(leftOp->dataType == INT_TYPE)
@@ -415,14 +416,14 @@ void genAssignmentStmt(AST_NODE* assignmentNode)
         }
         else if(leftOp->dataType == FLOAT_TYPE)
         {
-            fprintf(fptr, "ldr s%d, =_g_%s\n", left_reg, leftOp->semantic_value.identifierSemanticValue.identifierName);
+            fprintf(fptr, "vldr.f32 s%d, =_g_%s\n", left_reg, leftOp->semantic_value.identifierSemanticValue.identifierName);
             if(leftOp->semantic_value.identifierSemanticValue.kind == NORMAL_ID)
                 fprintf(fptr, "vstr.f32 s%d, [r%d, #0]\n", reg, left_reg);
             else if(leftOp->semantic_value.identifierSemanticValue.kind == ARRAY_ID)
                 fprintf(fptr, "vstr.f32 s%d, [r%d, #%d]\n", reg, left_reg, 
                     leftOp->child->semantic_value.exprSemanticValue.constEvalValue.iValue*4);//global array
             free_reg(reg, FLOAT_TYPE);
-            free_reg(left_reg, INT_TYPE);
+            free_reg(left_reg, FLOAT_TYPE);
         }
     }
 
