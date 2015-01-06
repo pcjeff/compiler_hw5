@@ -252,7 +252,7 @@ void genprologue(char* functionName)
 }
 void genepilogue(char* functionName)
 {
-    int i=0;
+    int i=0, output_offset = 0;
     fprintf(fptr, "_end_%s:\n", functionName);
     for (i = 4; i <= 11; i++)
     {
@@ -268,7 +268,12 @@ void genepilogue(char* functionName)
     fprintf(fptr, "ldr fp, [fp,#0]\n");
     fprintf(fptr, "bx lr\n");
     fprintf(fptr, ".data\n");
-    fprintf(fptr, "_frameSize_%s: .word %d\n", functionName, AR_offset*-1+64);
+    output_offset =  AR_offset*-1+64;
+    while(output_offset%8)
+    {
+        output_offset++;
+    } 
+    fprintf(fptr, "_frameSize_%s: .word %d\n", functionName, output_offset);
 }
 void genStmtNode(AST_NODE *stmtNode)
 {
