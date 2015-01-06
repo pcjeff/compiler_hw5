@@ -516,7 +516,14 @@ void genevaluateExprValue(AST_NODE* exprNode)
                 //exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = -operandValue;
                 break;
             case UNARY_OP_LOGICAL_NEGATION:
-                fprintf(fptr, "mvn r%d, r%d\n", reg, left_reg);
+                //fprintf(fptr, "mvn r%d, r%d\n", reg, left_reg);
+                fprintf(fptr, "\tldr r%d, =1\n", reg);
+                fprintf(fptr, "\tcmp r%d, #0\n", left_reg);
+                fprintf(fptr, "\tbeq  INT_LABEL%d\n", label_num);
+                
+                fprintf(fptr, "\tldr r%d, =0\n", reg);
+                fprintf(fptr, "INT_LABEL%d:\n", label_num);
+                label_num++;
                 //exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = !operandValue;
                 break;
             default:
@@ -696,8 +703,7 @@ void genWriteFunction(AST_NODE* functionCallNode)
     }
     else if(actualParameter->dataType == FLOAT_TYPE)
     {
-        genExprRelatedNode(actualParameter);
-        reg = actualParameter->place;
+        reg = get_reg(FLOAT_TYPE);
         int temp_reg = get_reg(INT_TYPE);
         if(actualParameter->semantic_value.identifierSemanticValue.symbolTableEntry->nestingLevel == 0)
         {
@@ -717,8 +723,7 @@ void genWriteFunction(AST_NODE* functionCallNode)
     }
     else if(actualParameter->dataType == INT_TYPE)
     {
-        genExprRelatedNode(actualParameter);
-        reg = actualParameter->place;
+        reg = get_reg(INT_TYPE);
         int temp_reg = get_reg(INT_TYPE);
         if(actualParameter->semantic_value.identifierSemanticValue.symbolTableEntry->nestingLevel == 0)
         {
