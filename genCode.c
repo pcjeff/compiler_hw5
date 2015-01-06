@@ -494,7 +494,31 @@ void genevaluateExprValue(AST_NODE* exprNode)
         }
         else //float binary
         {
-
+            left_reg = leftOp->place;
+            right_reg = rightOp->place;
+            reg = get_reg(FLOAT_TYPE);
+            exprNode->place = reg;
+            switch(exprNode->semantic_value.exprSemanticValue.op.binaryOp)
+            {
+            case BINARY_OP_ADD:
+                fprintf(fptr, "vadd.f32 s%d, s%d, s%d\n", reg, left_reg, right_reg);
+                break;
+            case BINARY_OP_SUB:
+                fprintf(fptr, "vsub.f32 s%d, s%d, s%d\n", reg, left_reg, right_reg);
+                break;
+            case BINARY_OP_MUL:
+                fprintf(fptr, "vmul.f32 s%d, s%d, s%d\n", reg, left_reg, right_reg);
+                break;
+            case BINARY_OP_DIV:
+                fprintf(fptr, "vdiv.f32 s%d, s%d, s%d\n", reg, left_reg, right_reg);
+                break;
+            default:
+                printf("Unhandled case in void evaluateExprValue(AST_NODE* exprNode)\n");
+                break;
+            }
+            free_reg(left_reg, FLOAT_TYPE);
+            free_reg(right_reg, FLOAT_TYPE);
+            return ;
         }
     }
     else //unary
