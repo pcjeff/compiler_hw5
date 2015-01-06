@@ -571,11 +571,11 @@ void genevaluateExprValue(AST_NODE* exprNode)
                 free_reg(reg ,FLOAT_TYPE);
                 reg = get_reg(INT_TYPE);
                 exprNode->place = reg;
-                fprintf(fptr, "\tldr r%d, =1\n", reg);
-                fprintf(fptr, "\tvcmp.f32 s%d, s%d\n", left_reg, right_reg);
-                fprintf(fptr, "\tVMRS APSR_nzcv, FPSCR\n");
-                fprintf(fptr, "\tbgt FLOAT_LABEL%d\n", float_label_count);
-                fprintf(fptr, "\tldr r%d, =0\n", reg);
+                fprintf(fptr, "ldr r%d, =1\n", reg);
+                fprintf(fptr, "vcmp.f32 s%d, s%d\n", left_reg, right_reg);
+                fprintf(fptr, "VMRS APSR_nzcv, FPSCR\n");
+                fprintf(fptr, "bgt FLOAT_LABEL%d\n", float_label_count);
+                fprintf(fptr, "ldr r%d, =0\n", reg);
                 fprintf(fptr, "FLOAT_LABEL%d:\n", float_label_count);
                 float_label_count++;
                 break;
@@ -584,11 +584,11 @@ void genevaluateExprValue(AST_NODE* exprNode)
                 free_reg(reg ,FLOAT_TYPE);
                 reg = get_reg(INT_TYPE);
                 exprNode->place = reg;
-                fprintf(fptr, "\tldr r%d, =1\n", reg);
-                fprintf(fptr, "\tvcmp.f32 s%d, s%d\n", left_reg, right_reg);
-                fprintf(fptr, "\tVMRS APSR_nzcv, FPSCR\n");
-                fprintf(fptr, "\tblt FLOAT_LABEL%d\n", float_label_count);
-                fprintf(fptr, "\tldr r%d, =0\n", reg);
+                fprintf(fptr, "ldr r%d, =1\n", reg);
+                fprintf(fptr, "vcmp.f32 s%d, s%d\n", left_reg, right_reg);
+                fprintf(fptr, "VMRS APSR_nzcv, FPSCR\n");
+                fprintf(fptr, "blt FLOAT_LABEL%d\n", float_label_count);
+                fprintf(fptr, "ldr r%d, =0\n", reg);
                 fprintf(fptr, "FLOAT_LABEL%d:\n", float_label_count);
                 float_label_count++;
                 break;
@@ -628,11 +628,12 @@ void genevaluateExprValue(AST_NODE* exprNode)
                 break;
             case UNARY_OP_LOGICAL_NEGATION:
                 //fprintf(fptr, "mvn r%d, r%d\n", reg, left_reg);
-                fprintf(fptr, "\tldr r%d, =1\n", reg);
-                fprintf(fptr, "\tcmp r%d, #0\n", left_reg);
-                fprintf(fptr, "\tbeq  INT_LABEL%d\n", label_num);
+                fprintf(fptr, "ldr r%d, =1\n", reg);
+                fprintf(fptr, "cmp r%d, #0\n", left_reg);
+                fprintf(fptr, "VMRS APSR_nzcv, FPSCR\n");
+                fprintf(fptr, "beq  INT_LABEL%d\n", label_num);
                 
-                fprintf(fptr, "\tldr r%d, =0\n", reg);
+                fprintf(fptr, "ldr r%d, =0\n", reg);
                 fprintf(fptr, "INT_LABEL%d:\n", label_num);
                 label_num++;
                 //exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = !operandValue;
@@ -659,11 +660,11 @@ void genevaluateExprValue(AST_NODE* exprNode)
                 //exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = -operandValue;
                 break;
             case UNARY_OP_LOGICAL_NEGATION:
-                fprintf(fptr, "\tvldr.f32 s%d, =1.0\n", reg);
-                fprintf(fptr, "\tvcmp.f32 s%d, #0.0\n", left_reg);
-                fprintf(fptr, "\tbeq  FLOAT_LABEL%d\n", float_label_count);
+                fprintf(fptr, "vldr.f32 s%d, =1\n", reg);
+                fprintf(fptr, "vcmp.f32 s%d, #0\n", left_reg);
+                fprintf(fptr, "beq  FLOAT_LABEL%d\n", float_label_count);
                 
-                fprintf(fptr, "\tldr r%d, =0\n", reg);
+                fprintf(fptr, "vldr.f32 s%d, =0\n", reg);
                 fprintf(fptr, "FLOAT_LABEL%d:\n", float_label_count);
                 float_label_count++;
                 //exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = !operandValue;
