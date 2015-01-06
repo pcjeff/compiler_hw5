@@ -416,7 +416,7 @@ void genevaluateExprValue(AST_NODE* exprNode)
                 fprintf(fptr, "mul r%d, r%d, r%d\n", reg, left_reg, right_reg);
                 break;
             case BINARY_OP_DIV:
-                fprintf(fptr, "div r%d, r%d, r%d\n", reg, left_reg, right_reg);
+                fprintf(fptr, "sdiv r%d, r%d, r%d\n", reg, left_reg, right_reg);
                 break;
             case BINARY_OP_EQ:
                 fprintf(fptr, "cmp r%d, r%d\n", left_reg, right_reg);
