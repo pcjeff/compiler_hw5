@@ -76,6 +76,7 @@ void genCode(AST_NODE *root)
 {
     fptr = fopen("output.s", "w");
     genProgramNode(root);
+    fclose(fptr);
     return;
 }
 void genProgramNode(AST_NODE *programNode)
@@ -421,30 +422,38 @@ void genevaluateExprValue(AST_NODE* exprNode)
                 fprintf(fptr, "cmp r%d, r%d\n", left_reg, right_reg);
                 fprintf(fptr, "beq _LABEL_%d\n", label_num);
                 fprintf(fptr, "mov r%d, #0\n", reg);
+                fprintf(fptr, "b _LABELEXIT_%d\n", label_num);
                 fprintf(fptr, "_LABEL_%d:\n", label_num);
                 fprintf(fptr, "mov r%d, #1\n", reg);
+                fprintf(fptr, "_LABELEXIT_%d:\n", label_num);
                 label_num++;
                 break;
             case BINARY_OP_GE:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue >= rightValue;
+                fprintf(fptr, "cmp r%d, r%d\n", left_reg, right_reg);
+                fprintf(fptr, "bge _LABEL_%d\n", label_num);
+                fprintf(fptr, "mov r%d, #0\n", reg);
+                fprintf(fptr, "b _LABELEXIT_%d\n", label_num);
+                fprintf(fptr, "_LABEL_%d:\n", label_num);
+                fprintf(fptr, "mov r%d, #1\n", reg);
+                fprintf(fptr, "_LABELEXIT_%d:\n", label_num);
                 break;
             case BINARY_OP_LE:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue <= rightValue;
+                
                 break;
             case BINARY_OP_NE:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue != rightValue;
+                
                 break;
             case BINARY_OP_GT:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue > rightValue;
+                
                 break;
             case BINARY_OP_LT:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue < rightValue;
+                
                 break;
             case BINARY_OP_AND:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue && rightValue;
+                
                 break;
             case BINARY_OP_OR:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue || rightValue;
+               
                 break;
             default:
                 printf("Unhandled case in void evaluateExprValue(AST_NODE* exprNode)\n");
@@ -469,13 +478,8 @@ void genExprNode(AST_NODE* exprNode)
         genExprRelatedNode(leftOp);
         genExprRelatedNode(rightOp);
 
-        if(
-           (leftOp->nodeType == CONST_VALUE_NODE || leftOp->nodeType == IDENTIFIER_NODE) &&
-           (rightOp->nodeType == CONST_VALUE_NODE || rightOp->nodeType == IDENTIFIER_NODE)
-          )
-        {
-            genevaluateExprValue(exprNode);
-        }
+        genevaluateExprValue(exprNode);
+
         free_reg(leftOp->place, leftOp->dataType);
         free_reg(rightOp->place, leftOp->dataType);
     }
@@ -483,13 +487,8 @@ void genExprNode(AST_NODE* exprNode)
     {
         AST_NODE* operand = exprNode->child;
         genExprRelatedNode(operand);
-        if(
-           (operand->nodeType == CONST_VALUE_NODE) || (operand->nodeType == IDENTIFIER_NODE)
-          )
-        {
-            genevaluateExprValue(exprNode);
+        genevaluateExprValue(exprNode);
             //同上
-        }
         free_reg(operand->place, operand->dataType);
     }
 }
