@@ -406,8 +406,8 @@ void genevaluateExprValue(AST_NODE* exprNode)
             right_reg = get_reg(INT_TYPE);
             reg = get_reg(INT_TYPE);
             exprNode->place = reg;
-            fprintf(fptr, "ldr r%d, #%d\n", left_reg, leftValue);
-            fprintf(fptr, "ldr r%d, #%d\n", right_reg, rightValue);
+            fprintf(fptr, "mov r%d, #%d\n", left_reg, leftValue);
+            fprintf(fptr, "mov r%d, #%d\n", right_reg, rightValue);
             switch(exprNode->semantic_value.exprSemanticValue.op.binaryOp)
             {
             case BINARY_OP_ADD:
@@ -425,9 +425,9 @@ void genevaluateExprValue(AST_NODE* exprNode)
             case BINARY_OP_EQ:
                 fprintf(fptr, "cmp r%d, r%d\n", left_reg, right_reg);
                 fprintf(fptr, "beq _LABEL_%d\n", label_num);
-                fprintf(fptr, "mov r%d #1\n", reg);
+                fprintf(fptr, "mov r%d, #1\n", reg);
                 fprintf(fptr, "_LABEL_%d:\n", label_num);
-                fprintf(fptr, "mov r%d #0\n", reg);
+                fprintf(fptr, "mov r%d, #0\n", reg);
                 label_num++;
                 break;
             case BINARY_OP_GE:
