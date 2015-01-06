@@ -35,7 +35,7 @@ void free_reg(int reg_num, int float_or_int);
 int reg_use[2][8] = {0};
 
 int scopelevel = 0, AR_offset = 0, reg_num = 0;
-int const_num = 0;
+int const_num = 0, label_num = 0;;
 int fp_num = 0;
 
 
@@ -267,6 +267,7 @@ void genepilogue(char* functionName)
     fprintf(fptr, "add sp, sp, #4\n");
     fprintf(fptr, "ldr fp, [fp,#0]\n");
     fprintf(fptr, "bx lr\n");
+    fprintf(fptr, ".data\n");
     fprintf(fptr, "_frameSize_%s: .word %d\n", functionName, AR_offset*-1+64);
 }
 void genStmtNode(AST_NODE *stmtNode)
@@ -380,34 +381,111 @@ void genConstValueNode(AST_NODE* constValueNode)
     }
 
 }
-void genExprNode(AST_NODE* exprNode)
+void genevaluateExprValue(AST_NODE* exprNode)
 {
+    int left_reg = -1;
+    int right_reg = -1;
+    int reg = -1;
+    if(exprNode->semantic_value.exprSemanticValue.kind == BINARY_OPERATION)
+    {
+        AST_NODE* leftOp = exprNode->child;
+        AST_NODE* rightOp = leftOp->rightSibling;
+        if(leftOp->dataType == INT_TYPE && rightOp->dataType == INT_TYPE)
+        {
+            int leftValue = 0;
+            int rightValue = 0;
+            getExprOrConstValue(leftOp, &leftValue, NULL);
+            getExprOrConstValue(rightOp, &rightValue, NULL);
+            exprNode->dataType = INT_TYPE;
+            left_reg = get_reg(INT_TYPE);
+            right_reg = get_reg(INT_TYPE);
+            reg = get_reg(INT_TYPE);
+            exprNode->place = reg;
+            fprintf(fptr, "ldr r%d, #%d\n", left_reg, leftValue);
+            fprintf(fptr, "ldr r%d, #%d\n", right_reg, rightValue);
+            switch(exprNode->semantic_value.exprSemanticValue.op.binaryOp)
+            {
+            case BINARY_OP_ADD:
+                fprintf(fptr, "add r%d, r%d, r%d\n", reg, left_reg, right_reg);
+                break;
+            case BINARY_OP_SUB:
+                fprintf(fptr, "sub r%d, r%d, r%d\n", reg, left_reg, right_reg);
+                break;
+            case BINARY_OP_MUL:
+                fprintf(fptr, "mul r%d, r%d, r%d\n", reg, left_reg, right_reg);
+                break;
+            case BINARY_OP_DIV:
+                fprintf(fptr, "div r%d, r%d, r%d\n", reg, left_reg, right_reg);
+                break;
+            case BINARY_OP_EQ:
+                fprintf(fptr, "cmp r%d, r%d\n", left_reg, right_reg);
+                fprintf(fptr, "beq _LABEL_%d\n", label_num);
+                fprintf(fptr, "mov r%d #1\n", reg);
+                fprintf(fptr, "_LABEL_%d:\n", label_num);
+                fprintf(fptr, "mov r%d #0\n", reg);
+                label_num++;
+                break;
+            case BINARY_OP_GE:
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue >= rightValue;
+                break;
+            case BINARY_OP_LE:
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue <= rightValue;
+                break;
+            case BINARY_OP_NE:
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue != rightValue;
+                break;
+            case BINARY_OP_GT:
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue > rightValue;
+                break;
+            case BINARY_OP_LT:
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue < rightValue;
+                break;
+            case BINARY_OP_AND:
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue && rightValue;
+                break;
+            case BINARY_OP_OR:
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue || rightValue;
+                break;
+            default:
+                printf("Unhandled case in void evaluateExprValue(AST_NODE* exprNode)\n");
+                break;
+            }
+            free_reg(left_reg, INT_TYPE);
+            free_reg(right_reg, INT_TYPE);
+            return ;
+        }
+
+    }
+    else
+    {}
+}
+void genExprNode(AST_NODE* exprNode)
+{//加上constant folding 以外的地方
     int reg = 0;
     if(exprNode->semantic_value.exprSemanticValue.kind == BINARY_OPERATION)
     {
         AST_NODE* leftOp = exprNode->child;
         AST_NODE* rightOp = leftOp->rightSibling;
-        //genExprRelatedNode(leftOp);
-        //genExprRelatedNode(rightOp);
+        genExprRelatedNode(leftOp);
+        genExprRelatedNode(rightOp);
 
-        if((exprNode->dataType != ERROR_TYPE) &&
-           (leftOp->nodeType == CONST_VALUE_NODE || (leftOp->nodeType == EXPR_NODE && leftOp->semantic_value.exprSemanticValue.isConstEval)) &&
-           (rightOp->nodeType == CONST_VALUE_NODE || (rightOp->nodeType == EXPR_NODE && rightOp->semantic_value.exprSemanticValue.isConstEval))
+        if(
+           (leftOp->nodeType == CONST_VALUE_NODE || leftOp->nodeType == IDENTIFIER_NODE) &&
+           (rightOp->nodeType == CONST_VALUE_NODE || rightOp->nodeType == IDENTIFIER_NODE)
           )
         {
-            genConstValueNode(exprNode);
-            //sematic anylysis 已經把exprNode 的值算好 存在exprNode
+            genevaluateExprValue(exprNode);
         }
     }
     else
     {
         AST_NODE* operand = exprNode->child;
         genExprRelatedNode(operand);
-        if((exprNode->dataType != ERROR_TYPE) &&
-           (operand->nodeType == CONST_VALUE_NODE || (operand->nodeType == EXPR_NODE && operand->semantic_value.exprSemanticValue.isConstEval))
+        if(
+           (operand->nodeType == CONST_VALUE_NODE) || (operand->nodeType == IDENTIFIER_NODE)
           )
         {
-            genConstValueNode(exprNode);
+            genevaluateExprValue(exprNode);
             //同上
         }
     }
@@ -528,7 +606,7 @@ void gencheckFunctionCall(AST_NODE* functionCallNode)
         return;
     }    
     else
-        fprintf(fptr, "\nbl %s\n", functionIDNode->semantic_value.identifierSemanticValue.identifierName);
+        fprintf(fptr, "\nbl _start_%s\n", functionIDNode->semantic_value.identifierSemanticValue.identifierName);
 }
 void genWriteFunction(AST_NODE* functionCallNode)
 {
