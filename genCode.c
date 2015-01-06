@@ -24,6 +24,8 @@ void genVariableLValue(AST_NODE* idNode);
 void genVariableRValue(AST_NODE* idNode);
 void genExprRelatedNode(AST_NODE* exprRelatedNode);
 void genConstValueNode(AST_NODE* constValueNode);
+void genExprNode(AST_NODE* exprNode);
+void genevaluateExprValue(AST_NODE* exprNode);
 
 int get_reg(int float_or_int);
 void free_reg(int reg_num, int float_or_int);
@@ -307,7 +309,7 @@ void genVariableLValue(AST_NODE* idNode)
     idNode->semantic_value.identifierSemanticValue.symbolTableEntry->offset = AR_offset;
 }
 void genVariableRValue(AST_NODE* idNode)
-{//袋檢查
+{
     int reg = 0;
     if(idNode->dataType == INT_TYPE)
     {
@@ -319,7 +321,7 @@ void genVariableRValue(AST_NODE* idNode)
     else 
     {
         reg = get_reg(FLOAT_TYPE);
-        fprintf(fptr, "vldr.f23 s%d, [fp, #%d]\n", reg, 
+        fprintf(fptr, "vldr.f32 s%d, [fp, #%d]\n", reg, 
             idNode->semantic_value.identifierSemanticValue.symbolTableEntry->offset);
         idNode->place = reg;
     }
@@ -331,7 +333,7 @@ void genConstValueNode(AST_NODE* constValueNode)
     {
         reg = get_reg(INT_TYPE);
         constValueNode->place = reg;
-        fprintf(fptr, "mov r%d, #%d\n", reg, constValueNode->semantic_value.const1->const_u.intval);
+        fprintf(fptr, "mov r%d, #%d\n", reg, constValueNode->semantic_value.exprSemanticValue.constEvalValue.iValue);
     }
     else 
     {
@@ -340,7 +342,7 @@ void genConstValueNode(AST_NODE* constValueNode)
         constValueNode->place = reg;
         fprintf(fptr, ".data\n");
         fprintf(fptr, "_fp_%d: .float ", fp_num);
-        fprintf(fptr, "%f\n", constValueNode->semantic_value.const1->const_u.fval);
+        fprintf(fptr, "%f\n", constValueNode->semantic_value.exprSemanticValue.constEvalValue.fValue);
         fprintf(fptr, ".text\n");
         fprintf(fptr, "ldr r%d, =_fp_%d\n", temp_reg, fp_num);
         fprintf(fptr, "vldr.f32 s%d, [r%d, #0]\n", reg, temp_reg);
@@ -350,13 +352,45 @@ void genConstValueNode(AST_NODE* constValueNode)
     }
 
 }
+void genExprNode(AST_NODE* exprNode)
+{
+    int reg = 0;
+    if(exprNode->semantic_value.exprSemanticValue.kind == BINARY_OPERATION)
+    {
+        AST_NODE* leftOp = exprNode->child;
+        AST_NODE* rightOp = leftOp->rightSibling;
+        genExprRelatedNode(leftOp);
+        genExprRelatedNode(rightOp);
+
+        if((exprNode->dataType != ERROR_TYPE) &&
+           (leftOp->nodeType == CONST_VALUE_NODE || (leftOp->nodeType == EXPR_NODE && leftOp->semantic_value.exprSemanticValue.isConstEval)) &&
+           (rightOp->nodeType == CONST_VALUE_NODE || (rightOp->nodeType == EXPR_NODE && rightOp->semantic_value.exprSemanticValue.isConstEval))
+          )
+        {
+            genConstValueNode(exprNode);
+            //sematic anylysis 已經把exprNode 的值算好 存在exprNode
+        }
+    }
+    else
+    {
+        AST_NODE* operand = exprNode->child;
+        genExprRelatedNode(operand);
+        if((exprNode->dataType != ERROR_TYPE) &&
+           (operand->nodeType == CONST_VALUE_NODE || (operand->nodeType == EXPR_NODE && operand->semantic_value.exprSemanticValue.isConstEval))
+          )
+        {
+            genConstValueNode(exprNode);
+            //同上
+        }
+    }
+}
 void genExprRelatedNode(AST_NODE* exprRelatedNode)
 {
 
     switch(exprRelatedNode->nodeType)
     {
     case EXPR_NODE:
-        //processExprNode(exprRelatedNode);
+        genExprNode(exprRelatedNode);
         break;
     case STMT_NODE:
         //function call
