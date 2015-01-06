@@ -512,6 +512,39 @@ void genevaluateExprValue(AST_NODE* exprNode)
             case BINARY_OP_DIV:
                 fprintf(fptr, "vdiv.f32 s%d, s%d, s%d\n", reg, left_reg, right_reg);
                 break;
+            case BINARY_OP_EQ:
+                //exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue == rightValue;
+                fprintf(fptr, "vcmp.f32 r%d, r%d\n", left_reg, right_reg);
+                fprintf(fptr, "VMRS APSR_nzev, FRCR\n");
+                fprintf(fptr, "beq _LABEL_%d\n", label_num);
+                fprintf(fptr, "vmov r%d, #0\n", reg);
+                fprintf(fptr, "b _LABELEXIT_%d\n", label_num);
+                fprintf(fptr, "_LABEL_%d:\n", label_num);
+                fprintf(fptr, "vmov.f32 r%d, #1\n", reg);
+                fprintf(fptr, "_LABELEXIT_%d:\n", label_num);
+                label_num++;
+                break;
+            case BINARY_OP_GE:
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue >= rightValue;
+                break;
+            case BINARY_OP_LE:
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue <= rightValue;
+                break;
+            case BINARY_OP_NE:
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue != rightValue;
+                break;
+            case BINARY_OP_GT:
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue > rightValue;
+                break;
+            case BINARY_OP_LT:
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue < rightValue;
+                break;
+            case BINARY_OP_AND:
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue && rightValue;
+                break;
+            case BINARY_OP_OR:
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue || rightValue;
+                break;
             default:
                 printf("Unhandled case in void evaluateExprValue(AST_NODE* exprNode)\n");
                 break;
