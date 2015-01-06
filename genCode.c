@@ -436,24 +436,53 @@ void genevaluateExprValue(AST_NODE* exprNode)
                 fprintf(fptr, "_LABEL_%d:\n", label_num);
                 fprintf(fptr, "mov r%d, #1\n", reg);
                 fprintf(fptr, "_LABELEXIT_%d:\n", label_num);
+                label_num++;
                 break;
             case BINARY_OP_LE:
-                
+                fprintf(fptr, "cmp r%d, r%d\n", left_reg, right_reg);
+                fprintf(fptr, "ble _LABEL_%d\n", label_num);
+                fprintf(fptr, "mov r%d, #0\n", reg);
+                fprintf(fptr, "b _LABELEXIT_%d\n", label_num);
+                fprintf(fptr, "_LABEL_%d:\n", label_num);
+                fprintf(fptr, "mov r%d, #1\n", reg);
+                fprintf(fptr, "_LABELEXIT_%d:\n", label_num);
+                label_num++;
                 break;
             case BINARY_OP_NE:
-                
+                fprintf(fptr, "cmp r%d, r%d\n", left_reg, right_reg);
+                fprintf(fptr, "bne _LABEL_%d\n", label_num);
+                fprintf(fptr, "mov r%d, #0\n", reg);
+                fprintf(fptr, "b _LABELEXIT_%d\n", label_num);
+                fprintf(fptr, "_LABEL_%d:\n", label_num);
+                fprintf(fptr, "mov r%d, #1\n", reg);
+                fprintf(fptr, "_LABELEXIT_%d:\n", label_num);
+                label_num++;
                 break;
             case BINARY_OP_GT:
-                
+                fprintf(fptr, "cmp r%d, r%d\n", left_reg, right_reg);
+                fprintf(fptr, "bgt _LABEL_%d\n", label_num);
+                fprintf(fptr, "mov r%d, #0\n", reg);
+                fprintf(fptr, "b _LABELEXIT_%d\n", label_num);
+                fprintf(fptr, "_LABEL_%d:\n", label_num);
+                fprintf(fptr, "mov r%d, #1\n", reg);
+                fprintf(fptr, "_LABELEXIT_%d:\n", label_num);
+                label_num++;
                 break;
             case BINARY_OP_LT:
-                
+                fprintf(fptr, "cmp r%d, r%d\n", left_reg, right_reg);
+                fprintf(fptr, "blt _LABEL_%d\n", label_num);
+                fprintf(fptr, "mov r%d, #0\n", reg);
+                fprintf(fptr, "b _LABELEXIT_%d\n", label_num);
+                fprintf(fptr, "_LABEL_%d:\n", label_num);
+                fprintf(fptr, "mov r%d, #1\n", reg);
+                fprintf(fptr, "_LABELEXIT_%d:\n", label_num);
+                label_num++;
                 break;
             case BINARY_OP_AND:
-                
+                fprintf(fptr, "and r%d, r%d, r%d\n", reg, left_reg, right_reg);
                 break;
             case BINARY_OP_OR:
-               
+                fprintf(fptr, "orr r%d, r%d, r%d\n", reg, left_reg, right_reg);
                 break;
             default:
                 printf("Unhandled case in void evaluateExprValue(AST_NODE* exprNode)\n");
