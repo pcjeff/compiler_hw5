@@ -26,6 +26,7 @@ void genExprRelatedNode(AST_NODE* exprRelatedNode);
 void genConstValueNode(AST_NODE* constValueNode);
 void genExprNode(AST_NODE* exprNode);
 void genevaluateExprValue(AST_NODE* exprNode);
+void genReturnStmt(AST_NODE* returnNode);
 
 int get_reg(int float_or_int);
 void free_reg(int reg_num, int float_or_int);
@@ -295,12 +296,39 @@ void genStmtNode(AST_NODE *stmtNode)
             gencheckFunctionCall(stmtNode);
             break;
         case RETURN_STMT:
-            //checkReturnStmt(stmtNode);
+            genReturnStmt(stmtNode);
             break;
         default:
             printf("Unhandle case in void processStmtNode(AST_NODE* stmtNode)\n");
             break;
         }
+    }
+}
+void genReturnStmt(AST_NODE* returnNode)
+{
+    int reg = -1;
+    if(returnNode->dataType == INT_TYPE)
+    {
+        reg = get_reg(INT_TYPE);
+        fprintf(fptr, "mov r%d, #%d\n", reg, returnNode->child->semantic_value.exprSemanticValue.constEvalValue.iValue);
+        fprintf(fptr, "mov r0, r%d\n", reg);
+        free_reg(reg, INT_TYPE);
+    }
+    else
+    {
+        reg = get_reg(FLOAT_TYPE);
+        int temp_reg = get_reg(INT_TYPE);
+        fprintf(fptr, ".data\n");
+        fprintf(fptr, "_fp_%d: .float ", fp_num);
+        fprintf(fptr, "%f\n", returnNode->child->semantic_value.exprSemanticValue.constEvalValue.fValue);
+        fprintf(fptr, ".text\n");
+        fprintf(fptr, "ldr r%d, =_fp_%d\n", temp_reg, fp_num);
+        fprintf(fptr, "vldr.f32 s%d, [r%d, #0]\n", reg, temp_reg);
+        free_reg(temp_reg, INT_TYPE);
+        fp_num++;
+        fprintf(fptr, "vmov s0, s%d\n", reg);
+        free_reg(temp_reg, INT_TYPE);
+        free_reg(reg, FLOAT_TYPE);
     }
 }
 void genVariableLValue(AST_NODE* idNode)
@@ -359,8 +387,8 @@ void genExprNode(AST_NODE* exprNode)
     {
         AST_NODE* leftOp = exprNode->child;
         AST_NODE* rightOp = leftOp->rightSibling;
-        genExprRelatedNode(leftOp);
-        genExprRelatedNode(rightOp);
+        //genExprRelatedNode(leftOp);
+        //genExprRelatedNode(rightOp);
 
         if((exprNode->dataType != ERROR_TYPE) &&
            (leftOp->nodeType == CONST_VALUE_NODE || (leftOp->nodeType == EXPR_NODE && leftOp->semantic_value.exprSemanticValue.isConstEval)) &&
@@ -390,7 +418,7 @@ void genExprRelatedNode(AST_NODE* exprRelatedNode)
     switch(exprRelatedNode->nodeType)
     {
     case EXPR_NODE:
-        //genExprNode(exprRelatedNode);
+        genExprNode(exprRelatedNode);
         break;
     case STMT_NODE:
         //function call
