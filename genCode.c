@@ -518,31 +518,82 @@ void genevaluateExprValue(AST_NODE* exprNode)
                 free_reg(reg ,FLOAT_TYPE);
                 reg = get_reg(INT_TYPE);
                 exprNode->place = reg;
-                fprintf(output, "\tldr r%d, =1\n", reg);
-                fprintf(output, "\tvcmp.f32 s%d, s%d\n", left_reg, right_reg);
-                fprintf(output, "\tVMRS APSR_nzcv, FPSCR\n");
-                fprintf(output, "\tbeq FLOAT_LABEL%d\n", float_label_count);
-                fprintf(output, "\tldr r%d, =0\n", reg);
-                fprintf(output, "FLOAT_LABEL%d:\n", float_label_count);
+                fprintf(fptr, "\tldr r%d, =1\n", reg);
+                fprintf(fptr, "\tvcmp.f32 s%d, s%d\n", left_reg, right_reg);
+                fprintf(fptr, "\tVMRS APSR_nzcv, FPSCR\n");
+                fprintf(fptr, "\tbeq FLOAT_LABEL%d\n", float_label_count);
+                fprintf(fptr, "\tldr r%d, =0\n", reg);
+                fprintf(fptr, "FLOAT_LABEL%d:\n", float_label_count);
                 float_label_count++;
                 break;
             case BINARY_OP_GE:
                 //exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue >= rightValue;
+                free_reg(reg ,FLOAT_TYPE);
+                reg = get_reg(INT_TYPE);
+                exprNode->place = reg;
+                fprintf(fptr, "\tldr r%d, =1\n", reg);
+                fprintf(fptr, "\tvcmp.f32 s%d, s%d\n", left_reg, right_reg);
+                fprintf(fptr, "\tVMRS APSR_nzcv, FPSCR\n");
+                fprintf(fptr, "\tbge FLOAT_LABEL%d\n", float_label_count);
+                fprintf(fptr, "\tldr r%d, =0\n", reg);
+                fprintf(fptr, "FLOAT_LABEL%d:\n", float_label_count);
+                float_label_count++;
                 break;
             case BINARY_OP_LE:
                 //exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue <= rightValue;
+                free_reg(reg ,FLOAT_TYPE);
+                reg = get_reg(INT_TYPE);
+                exprNode->place = reg;
+                fprintf(fptr, "\tldr r%d, =1\n", reg);
+                fprintf(fptr, "\tvcmp.f32 s%d, s%d\n", left_reg, right_reg);
+                fprintf(fptr, "\tVMRS APSR_nzcv, FPSCR\n");
+                fprintf(fptr, "\tble FLOAT_LABEL%d\n", float_label_count);
+                fprintf(fptr, "\tldr r%d, =0\n", reg);
+                fprintf(fptr, "FLOAT_LABEL%d:\n", float_label_count);
+                float_label_count++;
                 break;
             case BINARY_OP_NE:
                 //exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue != rightValue;
+                free_reg(reg ,FLOAT_TYPE);
+                reg = get_reg(INT_TYPE);
+                exprNode->place = reg;
+                fprintf(fptr, "\tldr r%d, =1\n", reg);
+                fprintf(fptr, "\tvcmp.f32 s%d, s%d\n", left_reg, right_reg);
+                fprintf(fptr, "\tVMRS APSR_nzcv, FPSCR\n");
+                fprintf(fptr, "\tbne FLOAT_LABEL%d\n", float_label_count);
+                fprintf(fptr, "\tldr r%d, =0\n", reg);
+                fprintf(fptr, "FLOAT_LABEL%d:\n", float_label_count);
+                float_label_count++;
                 break;
             case BINARY_OP_GT:
                 //exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue > rightValue;
+                free_reg(reg ,FLOAT_TYPE);
+                reg = get_reg(INT_TYPE);
+                exprNode->place = reg;
+                fprintf(fptr, "\tldr r%d, =1\n", reg);
+                fprintf(fptr, "\tvcmp.f32 s%d, s%d\n", left_reg, right_reg);
+                fprintf(fptr, "\tVMRS APSR_nzcv, FPSCR\n");
+                fprintf(fptr, "\tbgt FLOAT_LABEL%d\n", float_label_count);
+                fprintf(fptr, "\tldr r%d, =0\n", reg);
+                fprintf(fptr, "FLOAT_LABEL%d:\n", float_label_count);
+                float_label_count++;
                 break;
             case BINARY_OP_LT:
                 //exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue < rightValue;
+                free_reg(reg ,FLOAT_TYPE);
+                reg = get_reg(INT_TYPE);
+                exprNode->place = reg;
+                fprintf(fptr, "\tldr r%d, =1\n", reg);
+                fprintf(fptr, "\tvcmp.f32 s%d, s%d\n", left_reg, right_reg);
+                fprintf(fptr, "\tVMRS APSR_nzcv, FPSCR\n");
+                fprintf(fptr, "\tblt FLOAT_LABEL%d\n", float_label_count);
+                fprintf(fptr, "\tldr r%d, =0\n", reg);
+                fprintf(fptr, "FLOAT_LABEL%d:\n", float_label_count);
+                float_label_count++;
                 break;
             case BINARY_OP_AND:
                 //exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue && rightValue;
+                
                 break;
             case BINARY_OP_OR:
                 //exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue || rightValue;
