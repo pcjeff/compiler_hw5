@@ -397,17 +397,12 @@ void genevaluateExprValue(AST_NODE* exprNode)
         AST_NODE* rightOp = leftOp->rightSibling;
         if(leftOp->dataType == INT_TYPE && rightOp->dataType == INT_TYPE)
         {
-            int leftValue = 0;
-            int rightValue = 0;
-            getExprOrConstValue(leftOp, &leftValue, NULL);
-            getExprOrConstValue(rightOp, &rightValue, NULL);
             exprNode->dataType = INT_TYPE;
-            left_reg = get_reg(INT_TYPE);
-            right_reg = get_reg(INT_TYPE);
+            left_reg = leftOp->place;
+            right_reg = rightOp->place;
             reg = get_reg(INT_TYPE);
             exprNode->place = reg;
-            fprintf(fptr, "mov r%d, #%d\n", left_reg, leftValue);
-            fprintf(fptr, "mov r%d, #%d\n", right_reg, rightValue);
+            
             switch(exprNode->semantic_value.exprSemanticValue.op.binaryOp)
             {
             case BINARY_OP_ADD:
@@ -425,9 +420,9 @@ void genevaluateExprValue(AST_NODE* exprNode)
             case BINARY_OP_EQ:
                 fprintf(fptr, "cmp r%d, r%d\n", left_reg, right_reg);
                 fprintf(fptr, "beq _LABEL_%d\n", label_num);
-                fprintf(fptr, "mov r%d, #1\n", reg);
-                fprintf(fptr, "_LABEL_%d:\n", label_num);
                 fprintf(fptr, "mov r%d, #0\n", reg);
+                fprintf(fptr, "_LABEL_%d:\n", label_num);
+                fprintf(fptr, "mov r%d, #1\n", reg);
                 label_num++;
                 break;
             case BINARY_OP_GE:
@@ -481,6 +476,8 @@ void genExprNode(AST_NODE* exprNode)
         {
             genevaluateExprValue(exprNode);
         }
+        free_reg(leftOp->place, leftOp->dataType);
+        free_reg(rightOp->place, leftOp->dataType);
     }
     else
     {
@@ -493,6 +490,7 @@ void genExprNode(AST_NODE* exprNode)
             genevaluateExprValue(exprNode);
             //同上
         }
+        free_reg(operand->place, operand->dataType);
     }
 }
 void genExprRelatedNode(AST_NODE* exprRelatedNode)
