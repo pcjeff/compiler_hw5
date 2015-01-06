@@ -492,10 +492,44 @@ void genevaluateExprValue(AST_NODE* exprNode)
             free_reg(right_reg, INT_TYPE);
             return ;
         }
+        else //float binary
+        {
 
+        }
     }
-    else
-    {}
+    else //unary
+    {
+        AST_NODE* operand = exprNode->child;
+        if(operand->dataType == INT_TYPE)
+        {
+            left_reg = operand->place;
+            reg = get_reg(INT_TYPE);
+            exprNode->place = reg;
+            switch(exprNode->semantic_value.exprSemanticValue.op.unaryOp)
+            {
+            case UNARY_OP_POSITIVE:
+                fprintf(fptr, "ldr r%d, r%d\n", reg, left_reg);
+                //exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = operandValue;
+                break;
+            case UNARY_OP_NEGATIVE:
+                fprintf(fptr, "neg r%d, r%d\n", reg, left_reg);
+                //exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = -operandValue;
+                break;
+            case UNARY_OP_LOGICAL_NEGATION:
+                fprintf(fptr, "mvn r%d, r%d\n", reg, left_reg);
+                //exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = !operandValue;
+                break;
+            default:
+                printf("Unhandled case in void evaluateExprValue(AST_NODE* exprNode)\n");
+                break;
+            }
+            free_reg(left_reg, INT_TYPE);
+        }
+        else //float unary
+        {
+
+        }
+    }
 }
 void genExprNode(AST_NODE* exprNode)
 {//加上constant folding 以外的地方
