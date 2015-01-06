@@ -480,10 +480,11 @@ void genevaluateExprValue(AST_NODE* exprNode)
                 label_num++;
                 break;
             case BINARY_OP_AND:
-                fprintf(fptr, "and r%d, r%d, r%d\n", reg, left_reg, right_reg);
+                //fprintf(fptr, "and r%d, r%d, r%d\n", reg, left_reg, right_reg);
+                
                 break;
             case BINARY_OP_OR:
-                fprintf(fptr, "orr r%d, r%d, r%d\n", reg, left_reg, right_reg);
+                //fprintf(fptr, "orr r%d, r%d, r%d\n", reg, left_reg, right_reg);
                 break;
             default:
                 printf("Unhandled case in void evaluateExprValue(AST_NODE* exprNode)\n");
@@ -644,7 +645,33 @@ void genevaluateExprValue(AST_NODE* exprNode)
         }
         else //float unary
         {
-
+            left_reg = operand->place;
+            reg = get_reg(FLOAT_TYPE);
+            exprNode->place = reg;
+            switch(exprNode->semantic_value.exprSemanticValue.op.unaryOp)
+            {
+            case UNARY_OP_POSITIVE:
+                fprintf(fptr, "vldr.f32 s%d, s%d\n", reg, left_reg);
+                //exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = operandValue;
+                break;
+            case UNARY_OP_NEGATIVE:
+                fprintf(fptr, "vneg.f32 s%d, s%d\n", reg, left_reg);
+                //exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = -operandValue;
+                break;
+            case UNARY_OP_LOGICAL_NEGATION:
+                fprintf(fptr, "\tvldr.f32 s%d, =1.0\n", reg);
+                fprintf(fptr, "\tvcmp.f32 s%d, #0.0\n", left_reg);
+                fprintf(fptr, "\tbeq  FLOAT_LABEL%d\n", float_label_count);
+                
+                fprintf(fptr, "\tldr r%d, =0\n", reg);
+                fprintf(fptr, "FLOAT_LABEL%d:\n", float_label_count);
+                float_label_count++;
+                //exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = !operandValue;
+                break;
+            default:
+                printf("Unhandled case in void evaluateExprValue(AST_NODE* exprNode)\n");
+                break;
+            }
         }
     }
 }
