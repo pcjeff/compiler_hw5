@@ -696,7 +696,8 @@ void genWriteFunction(AST_NODE* functionCallNode)
     }
     else if(actualParameter->dataType == FLOAT_TYPE)
     {
-        reg = get_reg(FLOAT_TYPE);
+        genExprRelatedNode(actualParameter);
+        reg = actualParameter->place;
         int temp_reg = get_reg(INT_TYPE);
         if(actualParameter->semantic_value.identifierSemanticValue.symbolTableEntry->nestingLevel == 0)
         {
@@ -716,7 +717,8 @@ void genWriteFunction(AST_NODE* functionCallNode)
     }
     else if(actualParameter->dataType == INT_TYPE)
     {
-        reg = get_reg(INT_TYPE);
+        genExprRelatedNode(actualParameter);
+        reg = actualParameter->place;
         int temp_reg = get_reg(INT_TYPE);
         if(actualParameter->semantic_value.identifierSemanticValue.symbolTableEntry->nestingLevel == 0)
         {
