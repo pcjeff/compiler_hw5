@@ -630,7 +630,6 @@ void genevaluateExprValue(AST_NODE* exprNode)
                 //fprintf(fptr, "mvn r%d, r%d\n", reg, left_reg);
                 fprintf(fptr, "ldr r%d, =1\n", reg);
                 fprintf(fptr, "cmp r%d, #0\n", left_reg);
-                fprintf(fptr, "VMRS APSR_nzcv, FPSCR\n");
                 fprintf(fptr, "beq  INT_LABEL%d\n", label_num);
                 
                 fprintf(fptr, "ldr r%d, =0\n", reg);
@@ -660,8 +659,10 @@ void genevaluateExprValue(AST_NODE* exprNode)
                 //exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = -operandValue;
                 break;
             case UNARY_OP_LOGICAL_NEGATION:
+                //會當掉==
                 fprintf(fptr, "vldr.f32 s%d, =1\n", reg);
                 fprintf(fptr, "vcmp.f32 s%d, #0\n", left_reg);
+                fprintf(fptr, "VMRS APSR_nzcv, FPSCR\n");
                 fprintf(fptr, "beq  FLOAT_LABEL%d\n", float_label_count);
                 
                 fprintf(fptr, "vldr.f32 s%d, =0\n", reg);
@@ -821,7 +822,7 @@ void gencheckFunctionCall(AST_NODE* functionCallNode)
 void genWriteFunction(AST_NODE* functionCallNode)
 {
     int reg = 0, offset = 0;
-
+    //參數沒辦法吃進一個算式
     AST_NODE* functionIDNode = functionCallNode->child;
     AST_NODE* actualParameterList = functionIDNode->rightSibling;
     AST_NODE* actualParameter = actualParameterList->child;
