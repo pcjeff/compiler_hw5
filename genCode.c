@@ -35,7 +35,8 @@ void free_reg(int reg_num, int float_or_int);
 int reg_use[2][8] = {0};
 
 int scopelevel = 0, AR_offset = 0, reg_num = 0;
-int const_num = 0, label_num = 0;;
+int const_num = 0, label_num = 0;
+int float_label_count;
 int fp_num = 0;
 
 
@@ -514,36 +515,37 @@ void genevaluateExprValue(AST_NODE* exprNode)
                 break;
             case BINARY_OP_EQ:
                 //exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue == rightValue;
-                fprintf(fptr, "vcmp.f32 r%d, r%d\n", left_reg, right_reg);
-                fprintf(fptr, "VMRS APSR_nzev, FRCR\n");
-                fprintf(fptr, "beq _LABEL_%d\n", label_num);
-                fprintf(fptr, "vmov r%d, #0\n", reg);
-                fprintf(fptr, "b _LABELEXIT_%d\n", label_num);
-                fprintf(fptr, "_LABEL_%d:\n", label_num);
-                fprintf(fptr, "vmov.f32 r%d, #1\n", reg);
-                fprintf(fptr, "_LABELEXIT_%d:\n", label_num);
-                label_num++;
+                free_reg(reg ,FLOAT_TYPE);
+                reg = get_reg(INT_TYPE);
+                exprNode->place = reg;
+                fprintf(output, "\tldr r%d, =1\n", reg);
+                fprintf(output, "\tvcmp.f32 s%d, s%d\n", left_reg, right_reg);
+                fprintf(output, "\tVMRS APSR_nzcv, FPSCR\n");
+                fprintf(output, "\tbeq FLOAT_LABEL%d\n", float_label_count);
+                fprintf(output, "\tldr r%d, =0\n", reg);
+                fprintf(output, "FLOAT_LABEL%d:\n", float_label_count);
+                float_label_count++;
                 break;
             case BINARY_OP_GE:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue >= rightValue;
+                //exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue >= rightValue;
                 break;
             case BINARY_OP_LE:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue <= rightValue;
+                //exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue <= rightValue;
                 break;
             case BINARY_OP_NE:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue != rightValue;
+                //exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue != rightValue;
                 break;
             case BINARY_OP_GT:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue > rightValue;
+                //exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue > rightValue;
                 break;
             case BINARY_OP_LT:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue < rightValue;
+                //exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue < rightValue;
                 break;
             case BINARY_OP_AND:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue && rightValue;
+                //exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue && rightValue;
                 break;
             case BINARY_OP_OR:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue || rightValue;
+                //exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue || rightValue;
                 break;
             default:
                 printf("Unhandled case in void evaluateExprValue(AST_NODE* exprNode)\n");
