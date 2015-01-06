@@ -390,12 +390,23 @@ void genExprRelatedNode(AST_NODE* exprRelatedNode)
     switch(exprRelatedNode->nodeType)
     {
     case EXPR_NODE:
-        genExprNode(exprRelatedNode);
+        //genExprNode(exprRelatedNode);
         break;
     case STMT_NODE:
         //function call
         gencheckFunctionCall(exprRelatedNode);
-        exprRelatedNode->place = 0; //s0 or r0
+        int reg = 0;
+        if(exprRelatedNode->dataType == INT_TYPE)
+        {
+            reg = get_reg(INT_TYPE);
+            fprintf(fptr, "mov r%d, r0\n", reg);
+        }
+        else
+        {
+            reg = get_reg(FLOAT_TYPE);
+            fprintf(fptr, "vmov s%d, s0\n", reg);
+        }
+        exprRelatedNode->place = reg; //s0 or r0
         break;
     case IDENTIFIER_NODE:
         genVariableRValue(exprRelatedNode);
