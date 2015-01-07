@@ -27,6 +27,8 @@ void genConstValueNode(AST_NODE* constValueNode);
 void genExprNode(AST_NODE* exprNode);
 void genevaluateExprValue(AST_NODE* exprNode);
 void genReturnStmt(AST_NODE* returnNode);
+void genIfStmt(AST_NODE* ifNode);
+
 
 int get_reg(int float_or_int);
 void free_reg(int reg_num, int float_or_int);
@@ -120,18 +122,18 @@ void genGeneralNode(AST_NODE *node)
         }
         break;
     case NONEMPTY_ASSIGN_EXPR_LIST_NODE:
-        while(traverseChildren)
+        /*while(traverseChildren)
         {
             //checkAssignOrExpr(traverseChildren);
             traverseChildren = traverseChildren->rightSibling;
-        }
+        }*/
         break;
     case NONEMPTY_RELOP_EXPR_LIST_NODE:
-        while(traverseChildren)
+        /*while(traverseChildren)
         {
             //genExprRelatedNode(traverseChildren);
             traverseChildren = traverseChildren->rightSibling;
-        }
+        }*/
         break;
     case NUL_NODE:
         break;
@@ -298,7 +300,7 @@ void genStmtNode(AST_NODE *stmtNode)
             genAssignmentStmt(stmtNode);
             break;
         case IF_STMT:
-            //checkIfStmt(stmtNode);
+            //genIfStmt(stmtNode);
             break;
         case FUNCTION_CALL_STMT:
             gencheckFunctionCall(stmtNode);
@@ -347,19 +349,40 @@ void genVariableLValue(AST_NODE* idNode)
 void genVariableRValue(AST_NODE* idNode)
 {
     int reg = 0;
-    if(idNode->dataType == INT_TYPE)
+    if(idNode->semantic_value.identifierSemanticValue.symbolTableEntry->nestingLevel == 0)
     {
-        reg = get_reg(INT_TYPE);
-        fprintf(fptr, "ldr r%d, [fp, #%d]\n", reg, 
-            idNode->semantic_value.identifierSemanticValue.symbolTableEntry->offset);
-        idNode->place = reg;
+        if(idNode->dataType == INT_TYPE)
+        {
+            reg = get_reg(INT_TYPE);
+            fprintf(fptr, "ldr r%d, =_g_%s\n", reg, 
+                idNode->semantic_value.identifierSemanticValue.identifierName);
+        }
+        else
+        {
+            reg = get_reg(FLOAT_TYPE)
+            int temp_reg = get_reg(INT_TYPE);
+            fprintf(fptr, "ldr r%d, =_g_%s\n", temp_reg,
+                idNode->semantic_value.identifierSemanticValue.identifierName);
+            fprintf(fptr, "vldr.f32 s%d, [r%d, #0]\n", reg, temp_reg);
+            free_reg( temp_reg, INT_TYPE);
+        }
     }
-    else 
+    else
     {
-        reg = get_reg(FLOAT_TYPE);
-        fprintf(fptr, "vldr.f32 s%d, [fp, #%d]\n", reg, 
-            idNode->semantic_value.identifierSemanticValue.symbolTableEntry->offset);
-        idNode->place = reg;
+        if(idNode->dataType == INT_TYPE)
+        {
+            reg = get_reg(INT_TYPE);
+            fprintf(fptr, "ldr r%d, [fp, #%d]\n", reg, 
+                idNode->semantic_value.identifierSemanticValue.symbolTableEntry->offset);
+            idNode->place = reg;
+        }
+        else 
+        {
+            reg = get_reg(FLOAT_TYPE);
+            fprintf(fptr, "vldr.f32 s%d, [fp, #%d]\n", reg, 
+                idNode->semantic_value.identifierSemanticValue.symbolTableEntry->offset);
+            idNode->place = reg;
+        }
     }
 }
 void genConstValueNode(AST_NODE* constValueNode)
@@ -893,4 +916,12 @@ void genReadFunction(AST_NODE* functionCallNode)
 void genFreadFunction(AST_NODE* functionCallNode)
 {
     fprintf(fptr, "bl _read_float\n");
+}
+void genIfStmt(AST_NODE* ifNode)
+{
+    AST_NODE* boolExpression = ifNode->child;
+    AST_NODE* ifBodyNode = boolExpression->rightSibling;
+    AST_NODE* elsePartNode = ifBodyNode->rightSibling;
+    genExprRelatedNode(boolExpression);
+    fprintf(fptr, "ldr r%d\n", );
 }
