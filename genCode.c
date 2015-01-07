@@ -356,15 +356,19 @@ void genVariableRValue(AST_NODE* idNode)
             reg = get_reg(INT_TYPE);
             fprintf(fptr, "ldr r%d, =_g_%s\n", reg, 
                 idNode->semantic_value.identifierSemanticValue.identifierName);
+            fprintf(fptr, "ldr r%d, [r%d, #0]\n", reg, reg);
+            idNode->place = reg;
         }
         else
         {
-            reg = get_reg(FLOAT_TYPE)
+            reg = get_reg(FLOAT_TYPE);
             int temp_reg = get_reg(INT_TYPE);
             fprintf(fptr, "ldr r%d, =_g_%s\n", temp_reg,
                 idNode->semantic_value.identifierSemanticValue.identifierName);
+            fprintf(fptr, "ldr r%d, [r%d, #0]\n", reg, reg);
             fprintf(fptr, "vldr.f32 s%d, [r%d, #0]\n", reg, temp_reg);
             free_reg( temp_reg, INT_TYPE);
+            idNode->place = reg;
         }
     }
     else
@@ -919,9 +923,9 @@ void genFreadFunction(AST_NODE* functionCallNode)
 }
 void genIfStmt(AST_NODE* ifNode)
 {
-    AST_NODE* boolExpression = ifNode->child;
+    /*AST_NODE* boolExpression = ifNode->child;
     AST_NODE* ifBodyNode = boolExpression->rightSibling;
     AST_NODE* elsePartNode = ifBodyNode->rightSibling;
     genExprRelatedNode(boolExpression);
-    fprintf(fptr, "ldr r%d\n", );
+    fprintf(fptr, "ldr r%d\n", );*/
 }
