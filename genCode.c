@@ -295,7 +295,7 @@ void genStmtNode(AST_NODE *stmtNode)
         switch(stmtNode->semantic_value.stmtSemanticValue.kind)
         {
         case WHILE_STMT:
-            //checkWhileStmt(stmtNode);
+            genWhileStmt(stmtNode);
             break;
         case ASSIGN_STMT:
             genAssignmentStmt(stmtNode);
