@@ -343,9 +343,13 @@ void genReturnStmt(AST_NODE* returnNode)
     }
 }
 void genVariableLValue(AST_NODE* idNode)
-{   
-    AR_offset -= 4;
-    idNode->semantic_value.identifierSemanticValue.symbolTableEntry->offset = AR_offset;
+{
+    if(idNode->semantic_value.identifierSemanticValue.symbolTableEntry->offset < AR_offset
+        || idNode->semantic_value.identifierSemanticValue.symbolTableEntry->offset > 0)
+    {
+        AR_offset -= 4;
+        idNode->semantic_value.identifierSemanticValue.symbolTableEntry->offset = AR_offset;
+    }
 }
 void genVariableRValue(AST_NODE* idNode)
 {
