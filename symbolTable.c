@@ -145,6 +145,7 @@ SymbolTableEntry* enterSymbol(char* symbolName, SymbolAttribute* attribute)
     SymbolTableEntry* newEntry = newSymbolTableEntry(symbolTable.currentLevel);
     newEntry->attribute = attribute;
     newEntry->name = symbolName;
+    newEntry->offset = 100;
 
     while(hashChain)
     {
