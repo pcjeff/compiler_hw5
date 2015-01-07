@@ -660,12 +660,15 @@ void genevaluateExprValue(AST_NODE* exprNode)
                 break;
             case UNARY_OP_LOGICAL_NEGATION:
                 //會當掉==
-                fprintf(fptr, "vldr.f32 s%d, =1\n", reg);
+                free_reg(reg ,FLOAT_TYPE);
+                reg = get_reg(INT_TYPE);
+                exprNode->place = reg;
+                fprintf(fptr, "ldr r%d, =1\n", reg);
                 fprintf(fptr, "vcmp.f32 s%d, #0\n", left_reg);
                 fprintf(fptr, "VMRS APSR_nzcv, FPSCR\n");
                 fprintf(fptr, "beq  FLOAT_LABEL%d\n", float_label_count);
                 
-                fprintf(fptr, "vldr.f32 s%d, =0\n", reg);
+                fprintf(fptr, "ldr r%d, =0\n", reg);
                 fprintf(fptr, "FLOAT_LABEL%d:\n", float_label_count);
                 float_label_count++;
                 //exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = !operandValue;
