@@ -38,7 +38,8 @@ int reg_use[2][8] = {0};
 
 int scopelevel = 0, AR_offset = 0, reg_num = 0;
 int const_num = 0, label_num = 0;
-int float_label_count;
+int float_label_count = 0;;
+int if_count = 0;
 int fp_num = 0;
 
 
@@ -300,7 +301,7 @@ void genStmtNode(AST_NODE *stmtNode)
             genAssignmentStmt(stmtNode);
             break;
         case IF_STMT:
-            //genIfStmt(stmtNode);
+            genIfStmt(stmtNode);
             break;
         case FUNCTION_CALL_STMT:
             gencheckFunctionCall(stmtNode);
@@ -365,7 +366,7 @@ void genVariableRValue(AST_NODE* idNode)
             int temp_reg = get_reg(INT_TYPE);
             fprintf(fptr, "ldr r%d, =_g_%s\n", temp_reg,
                 idNode->semantic_value.identifierSemanticValue.identifierName);
-            fprintf(fptr, "ldr r%d, [r%d, #0]\n", reg, reg);
+            fprintf(fptr, "vldr.f32 s%d, [r%d, #0]\n", reg, temp_reg);
             fprintf(fptr, "vldr.f32 s%d, [r%d, #0]\n", reg, temp_reg);
             free_reg( temp_reg, INT_TYPE);
             idNode->place = reg;
@@ -923,9 +924,17 @@ void genFreadFunction(AST_NODE* functionCallNode)
 }
 void genIfStmt(AST_NODE* ifNode)
 {
-    /*AST_NODE* boolExpression = ifNode->child;
+    AST_NODE* boolExpression = ifNode->child;
     AST_NODE* ifBodyNode = boolExpression->rightSibling;
     AST_NODE* elsePartNode = ifBodyNode->rightSibling;
     genExprRelatedNode(boolExpression);
-    fprintf(fptr, "ldr r%d\n", );*/
+    fprintf(fptr, "cmp r%d, #0\n", boolExpression->place);
+    fprintf(fptr, "beq _if_%d\n", if_count);
+    if(elsePartNode != NULL)
+        genStmtNode(elsePartNode);
+    fprintf(fptr, "b _if_%d_exit\n", if_count);
+    fprintf(fptr, "_if_%d:\n", if_count);
+    genStmtNode(ifBodyNode);
+    fprintf(fptr, "_if_%d_exit:\n", if_count);
+    if_count++;
 }
