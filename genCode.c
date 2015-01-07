@@ -28,7 +28,7 @@ void genExprNode(AST_NODE* exprNode);
 void genevaluateExprValue(AST_NODE* exprNode);
 void genReturnStmt(AST_NODE* returnNode);
 void genIfStmt(AST_NODE* ifNode);
-
+void genWhileStmt(AST_NODE* whileNode);
 
 int get_reg(int float_or_int);
 void free_reg(int reg_num, int float_or_int);
@@ -39,7 +39,7 @@ int reg_use[2][8] = {0};
 int scopelevel = 0, AR_offset = 0, reg_num = 0;
 int const_num = 0, label_num = 0;
 int float_label_count = 0;;
-int if_count = 0;
+int if_count = 0, while_count = 0;
 int fp_num = 0;
 
 
@@ -937,4 +937,18 @@ void genIfStmt(AST_NODE* ifNode)
     fprintf(fptr, "_if_%d_exit:\n", if_count);
     if_count++;
     free_reg( boolExpression->place, INT_TYPE);
+}
+void genWhileStmt(AST_NODE* whileNode)
+{
+    AST_NODE* boolExpression = whileNode->child;
+    AST_NODE* bodyNode = boolExpression->rightSibling;
+
+    fprintf(fptr, "_while_%d:\n", while_count);
+    genExprRelatedNode(boolExpression);
+    fprintf(fptr, "cmp r%d, #0\n", boolExpression->place);
+    fprintf(fptr, "beq _while_exit_%d\n", while_count);
+    genStmtNode(bodyNode);
+    fprintf(fptr, "b _while_%d\n", while_count);
+    fprintf(fptr, "_while_exit_%d:\n", while_count);
+
 }
