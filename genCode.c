@@ -687,7 +687,6 @@ void genevaluateExprValue(AST_NODE* exprNode)
                 //exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = -operandValue;
                 break;
             case UNARY_OP_LOGICAL_NEGATION:
-                //會當掉==
                 free_reg(reg ,FLOAT_TYPE);
                 reg = get_reg(INT_TYPE);
                 exprNode->place = reg;
@@ -929,12 +928,13 @@ void genIfStmt(AST_NODE* ifNode)
     AST_NODE* elsePartNode = ifBodyNode->rightSibling;
     genExprRelatedNode(boolExpression);
     fprintf(fptr, "cmp r%d, #0\n", boolExpression->place);
-    fprintf(fptr, "beq _if_%d\n", if_count);
+    fprintf(fptr, "beq _else_%d\n", if_count);
+    genStmtNode(ifBodyNode);
+    fprintf(fptr, "b _if_%d_exit\n", if_count);
+    fprintf(fptr, "_else_%d:\n", if_count);
     if(elsePartNode != NULL)
         genStmtNode(elsePartNode);
-    fprintf(fptr, "b _if_%d_exit\n", if_count);
-    fprintf(fptr, "_if_%d:\n", if_count);
-    genStmtNode(ifBodyNode);
     fprintf(fptr, "_if_%d_exit:\n", if_count);
     if_count++;
+    free_reg( boolExpression->place, INT_TYPE);
 }
